@@ -78,6 +78,14 @@ describe('unflattenMessages / flattenMessageKeys', () => {
     })
     expect(flattenMessageKeys(base)).toEqual(['keybinds.actions.nav.settings', 'keybinds.actions.session.slot.1'])
   })
+
+  it('replaces single items of a base list from indexed keys and drops indexes the base lacks', () => {
+    const base = { composer: { placeholders: ['Ask anything', 'Start with a goal', 'Keep going'] } }
+    const flat = { 'composer.placeholders.0': 'Pergunte', 'composer.placeholders.2': 'Continue', 'composer.placeholders.9': 'x' }
+
+    expect(unflattenMessages(flat, base)).toEqual({ composer: { placeholders: ['Pergunte', 'Start with a goal', 'Continue'] } })
+    expect(base.composer.placeholders[0]).toBe('Ask anything')
+  })
 })
 
 describe('mergeTranslations', () => {

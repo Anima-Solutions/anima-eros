@@ -52,6 +52,22 @@ def _load_document(path: Path) -> Any:
         return yaml.safe_load(handle)
 
 
+def _is_known(key: str, reference: set[str]) -> bool:
+    """A reference key; ``<list>.<n>`` for a renderer list (one reference key, which a text-only pack
+    replaces one index at a time); or any key under an open map the export marks ``<map>.*`` (ids the
+    backend supplies, such as env vars or platform ids)."""
+    if key in reference:
+        return True
+    parent, _, position = key.rpartition(".")
+    if position.isdigit() and parent in reference:
+        return True
+    while parent:
+        if f"{parent}.*" in reference:
+            return True
+        parent = parent.rpartition(".")[0]
+    return False
+
+
 def check_language_packs(report, manifest: dict, plugin_dir: Path) -> None:
     """Locale-pack admission checks; a no-op (single passing line) when nothing is declared."""
     from hermes_cli.plugins_manifest import parse_provides_locales
@@ -102,7 +118,7 @@ def _check_locale_file(report, lang_id: str, surface: str, path: Path) -> None:
     if reference is None:
         report.add(label, True, f"{path.name}: {len(flat)} key(s); no {surface} key reference available, key check skipped")
         return
-    unknown = sorted(set(flat) - reference)
+    unknown = sorted(key for key in flat if not _is_known(key, reference))
     if unknown:
         report.warn(f"{path.name}: {len(unknown)} key(s) not in the English {surface} catalog (ignored at runtime): "
                     + ", ".join(unknown))

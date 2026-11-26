@@ -75,6 +75,27 @@ export function adaptStringOverrides(base: unknown, overrides: unknown): unknown
   return result
 }
 
+/** `<list>.<n>` replaces item n of a list in the base catalog (rotating
+ *  placeholders) while packs stay text-only: the other items keep the base
+ *  text, and an index the base list does not have is dropped. */
+function setListItem(
+  parent: Record<string, unknown>,
+  key: string,
+  base: readonly unknown[],
+  position: string,
+  value: string
+): void {
+  const current = parent[key]
+
+  if ((current !== undefined && !Array.isArray(current)) || !/^\d+$/.test(position) || Number(position) >= base.length) {
+    return
+  }
+
+  const list = Array.isArray(current) ? current : [...base]
+  list[Number(position)] = value
+  parent[key] = list
+}
+
 /** Message leaf a language pack can carry after parsing (YAML is text-only). */
 export type FlatMessages = Record<string, string>
 
@@ -116,6 +137,14 @@ export function unflattenMessages(flat: FlatMessages, base?: unknown): Record<st
         if (!isRecord(cursor[key])) {
           cursor[key] = value
         }
+
+        break
+      }
+
+      const child = isRecord(guide) ? guide[key] : undefined
+
+      if (Array.isArray(child)) {
+        setListItem(cursor, key, child, parts.slice(index).join('.'), value)
 
         break
       }

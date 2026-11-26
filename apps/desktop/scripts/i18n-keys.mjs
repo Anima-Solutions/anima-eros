@@ -15,15 +15,21 @@ import { isMain, repoRoot, workspaceTool } from '../../../scripts/build/frontend
 
 export const SURFACE = 'desktop'
 
-/** Sorted dotted leaf paths. Mirrors `flattenMessageKeys` in apps/shared. */
+/** Maps keyed by ids the backend supplies (env vars, platform and blueprint ids) that English
+ *  already fills in part; an EMPTY map in the catalog is open by construction and needs no entry. */
+export const OPEN_MAPS = new Set(['messaging.fieldCopy'])
+
+/** Sorted dotted leaf paths. Mirrors `flattenMessageKeys` in apps/shared, plus `<map>.*` for an
+ *  open map, so a pack's entries for ids English does not carry are not reported as dead keys. */
 export function flattenKeys(tree, prefix = '') {
   const isRecord = value => typeof value === 'object' && value !== null && !Array.isArray(value)
   if (!isRecord(tree)) return prefix ? [prefix] : []
   const keys = []
   for (const [key, value] of Object.entries(tree)) {
     const path = prefix ? `${prefix}.${key}` : key
-    if (isRecord(value)) keys.push(...flattenKeys(value, path))
-    else keys.push(path)
+    if (!isRecord(value)) keys.push(path)
+    else if (Object.keys(value).length === 0 || OPEN_MAPS.has(path)) keys.push(`${path}.*`, ...flattenKeys(value, path))
+    else keys.push(...flattenKeys(value, path))
   }
   return keys.sort()
 }

@@ -66,18 +66,24 @@ def test_tui_surface_is_checked_against_the_export_when_present(tmp_path, monkey
     fake_locales.mkdir()
     (fake_locales / "en.yaml").write_text("approval:\n  denied: Denied\n", encoding="utf-8")
     monkeypatch.setattr(i18n, "_locales_dir", lambda: fake_locales)
-    plugin = _pack(tmp_path, core={"approval": {"denied": "Odrzucono"}}, tui={"status": {"ready": "Gotowy", "bogus": "x"}})
+    plugin = _pack(tmp_path, core={"approval": {"denied": "Odrzucono"}}, tui={"status": {"ready": "Gotowy", "bogus": "x"},
+                                                                          "hints": {"0": "Zapytaj"},
+                                                                          "fields": {"NEW_VAR": {"label": "Nowa"}}})
 
     skipped = validate_plugin_dir(plugin)
     assert skipped.ok, skipped.failures
     ok, detail = _check(skipped, "locale pl.tui")
     assert ok and "skipped" in detail
 
-    (fake_locales / "_keys.tui.json").write_text('{"keys": ["status.ready"]}', encoding="utf-8")
+    (fake_locales / "_keys.tui.json").write_text('{"keys": ["status.ready", "hints", "fields.*"]}', encoding="utf-8")
     checked = validate_plugin_dir(plugin)
     assert checked.ok, checked.failures
     assert any("status.bogus" in w and "pl.tui.yaml" in w for w in checked.warnings), checked.warnings
-    assert locales_check.reference_keys("tui") == {"status.ready"}
+    # ``hints`` is a list in the English catalog: its indexed items are known keys, not dead ones.
+    assert not any("hints.0" in w for w in checked.warnings), checked.warnings
+    # ``fields.*`` marks an open map: entries for ids English does not carry are live, not dead.
+    assert not any("fields.NEW_VAR" in w for w in checked.warnings), checked.warnings
+    assert locales_check.reference_keys("tui") == {"status.ready", "hints", "fields.*"}
 
 
 def test_pack_with_register_function_still_probes(tmp_path):

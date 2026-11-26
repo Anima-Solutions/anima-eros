@@ -85,6 +85,14 @@ When the manifest declares `provides_locales`, the plugin loader registers every
   sets are exported to `locales/_keys.tui.json` and `locales/_keys.desktop.json` in the Hermes repo,
   which is what the validator checks against.
 - YAML values must be **text**. A number, list, `true`/`false` or empty value is rejected.
+- Where an English value is a **list** (the rotating composer placeholders `composer.newSessionPlaceholders`,
+  the intro lines `intro.stock.none`), translate it item by item with an index key:
+  `composer.newSessionPlaceholders.0`. Items you leave out stay in English.
+- Some Desktop entries are **open maps** keyed by ids the backend supplies, marked `<map>.*` in
+  `_keys.desktop.json`: `messaging.fieldCopy.<ENV_VAR>`, `messaging.platformDescription.<platform>`,
+  `messaging.platformIntro.<platform>`, `cron.blueprints.copy.<blueprint>` and
+  `cron.blueprints.options.<value>`. Any id is a live key there; without an entry the backend's
+  English text is shown.
 - Never use YAML reserved words (`on`, `off`, `yes`, `no`) as keys.
 
 ### Placeholders
