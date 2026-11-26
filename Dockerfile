@@ -354,9 +354,19 @@ COPY apps/shared/package.json apps/shared/
 COPY scripts/build/*.mjs scripts/build/
 # Dependencies first, keyed only by the manifests and the recipe, so a source
 # change reuses this layer and the build below reuses its install.
-RUN node apps/desktop/scripts/build-webapp.mjs --deps-only
+# The Ânima design system (@anima-solutions/*) is private on GitHub Packages:
+# its token arrives as a BuildKit secret (never in a layer), and pnpm reads
+# registry credentials only from the user-level npmrc, so one is written for
+# the step and removed with it.
+RUN --mount=type=secret,id=node_auth_token,env=NODE_AUTH_TOKEN \
+    printf '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}\n' > /root/.npmrc && \
+    node apps/desktop/scripts/build-webapp.mjs --deps-only && \
+    rm -f /root/.npmrc
 COPY apps/ apps/
-RUN node apps/desktop/scripts/build-webapp.mjs
+RUN --mount=type=secret,id=node_auth_token,env=NODE_AUTH_TOKEN \
+    printf '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}\n' > /root/.npmrc && \
+    node apps/desktop/scripts/build-webapp.mjs && \
+    rm -f /root/.npmrc
 
 FROM python_deps AS runtime
 # Standalone TypeScript linting is a runtime feature; Vite/esbuild are not.
