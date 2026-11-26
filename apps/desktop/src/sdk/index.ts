@@ -1688,9 +1688,11 @@ export type { TitlebarTool } from '@/app/shell/titlebar-controls'
  * `MEDIA:` delivery directives) and the same rich Markdown/media components as
  * core chat. Prefer this over raw Streamdown for transcript-style messages. */
 export { MessageTextContent } from '@/components/assistant-ui/markdown-text'
+/** The Ânima Eros lockup (theme-aware), the brand an empty chat is titled with. Sized by className. */
+export { ErosLogo } from '@/components/brand-logo'
 export { composerInputBacking, composerSurfaceRing } from '@/components/chat/composer-dock'
-/** The oversized Collapse lettering an empty chat is titled with — core writes
- *  "HERMES AGENT" with it, a `chat.empty` contribution writes its own name. */
+/** Hermes' oversized Collapse display lettering, for a `chat.empty` contribution
+ *  that wants it; core and Bot Mode title empty chats with `ErosLogo`. */
 export { Wordmark } from '@/components/chat/wordmark'
 /** Pane placement roles. `'floating'` is the one NON-tiling value: the pane is
  *  excluded from the layout tree and rendered as a fixed, draggable card above
