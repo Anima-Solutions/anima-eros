@@ -44,9 +44,11 @@ ui-tui/packages/hermes-ink/dist/
 /buildkitd.toml
 /docker-container-buildkitd.toml
 
-# Environment files
+# Environment files, at any depth: a nested deploy .env holds secrets too
 .env
 .env.*
+**/.env
+**/.env.*
 # ...but keep the template: docker/stage2-hook.sh seeds $HERMES_HOME/.env from
 # /opt/hermes/.env.example on first boot (OOF-285 — excluding it silently broke
 # first-boot .env seeding and the API_SERVER_KEY generation that depends on it).
@@ -70,6 +72,8 @@ htmlcov/
 
 # Runtime data (bind-mounted at /opt/data; must not leak into build context)
 data/
+deploy/docker/data/
+deploy/docker/exemplos/
 .hermes-docker/
 .notebooklm-home/
 
