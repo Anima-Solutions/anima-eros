@@ -21,13 +21,14 @@ Ela segue o mesmo padrão das outras stacks da Ânima nos VPS:
 | Backups | `/srv/backups/<APP_NAME>` |
 | Imagem | construída no próprio servidor (`make build`), com o token do GitHub Packages da conta de serviço |
 | Rede | a do Nginx Proxy Manager (`anima_proxymanager_shared_network`), como rede externa. Só `expose`: nenhuma porta publicada, nenhuma sub-rede |
-| Proxy | o NPM aponta para o **nome do container** (`<APP_NAME>`): `:9119` dashboard, `:9120` Webapp, `:8642` API |
+| Proxy | o NPM aponta para o **nome do container** (`<APP_NAME>`). Um domínio só: o dashboard na raiz (`:9119`) e o Webapp em `/app` (`:9120`). A API (`:8642`), se ligada, tem um Proxy Host próprio |
 
 ---
 
 ## Guia de instalação
 
-Uma instalação nova, por exemplo `APP_NAME=anima-eros` em `eros.animahub.ai` e `app.eros.animahub.ai`.
+Uma instalação nova, por exemplo `APP_NAME=anima-eros`, com o dashboard em `https://eros.animahub.ai` e o Webapp em
+`https://eros.animahub.ai/app`.
 
 ### 1. Clonar e criar o `.env`
 
@@ -43,7 +44,7 @@ make init
 Preencha o `.env`:
 
 - `NODE_AUTH_TOKEN`: o token da conta de serviço, com `read:packages`.
-- `DASHBOARD_URL` e `WEBAPP_URL`: os domínios, com https.
+- `DASHBOARD_URL` e `WEBAPP_URL`: já vêm como `https://eros.animahub.ai` e `https://eros.animahub.ai/app`.
 - `DASHBOARD_PASSWORD`: gere com `openssl rand -hex 16`.
 - `DASHBOARD_SESSION_SECRET`: gere com `make secret`.
 - `API_SERVER_KEY`: só se for ligar a API; gere com `make secret`.
@@ -55,28 +56,28 @@ Se o servidor tiver montagens próprias, como um vault do Obsidian, copie `docke
 
 ```sh
 make deploy        # git pull, build (≈10–15 min na primeira vez), up
-make configure     # pt-BR, Webapp e proxy confiável
+make configure     # pt-BR, URLs públicas, Webapp e proxy confiável
 docker compose exec eros hermes setup     # modelo e chaves de API
 ```
 
-### 3. Criar os Proxy Hosts no NPM
+### 3. Criar o Proxy Host no NPM
 
-Crie três Proxy Hosts, todos com Scheme `http`, **Websockets Support**, **Block Common Exploits**, Let's Encrypt,
-**Force SSL** e **HTTP/2**:
+O DNS de `eros.animahub.ai` precisa apontar para o servidor antes do certificado. Crie **um** Proxy Host:
 
-| Domínio | Forward Hostname | Forward Port |
-|---|---|---|
-| dashboard (`DASHBOARD_URL`) | `anima-eros` | `9119` |
-| Webapp (`WEBAPP_URL`) | `anima-eros` | `9120` |
-| API (opcional) | `anima-eros` | `8642` |
+- **Domain:** `eros.animahub.ai`. **Scheme** `http`, **Forward Hostname** `anima-eros`, **Forward Port** `9119`.
+- **Websockets Support** e **Block Common Exploits** ligados.
+- **SSL:** Let's Encrypt, **Force SSL** e **HTTP/2**.
+- **Advanced:** cole o bloco que o `make npm-config` imprime. É ele que serve o Webapp em `/app`.
+
+A API, se ligada, ganha um Proxy Host próprio (ex.: `api.eros.animahub.ai` → `anima-eros`, porta `8642`).
 
 Use sempre o nome do container, nunca o nome do serviço (`eros`): veja
 [Rede e Nginx Proxy Manager](deploy/docker/README.md#rede-e-nginx-proxy-manager).
 
 ### 4. Conferir
 
-- O dashboard abre a tela de login Ânima.
-- O Webapp abre em português. No primeiro acesso de cada navegador, o português leva uns 15 s para aparecer; ao
+- `https://eros.animahub.ai` abre a tela de login Ânima.
+- `https://eros.animahub.ai/app` abre o Webapp em português. No primeiro acesso de cada navegador, o português leva uns 15 s para aparecer; ao
   recarregar, aparece na hora.
 - `make logs` sem erros.
 
@@ -102,10 +103,11 @@ Troca o Hermes que roda hoje no `vps_anima01` pelo Ânima Eros, levando os dados
 
 | Muda | Fica igual |
 |---|---|
-| A stack: `anima-hermes` → `anima-eros`, no padrão das outras | Os domínios de hoje: `eros.impulsebpo.com`, `app.eros.impulsebpo.com` e `api.eros.impulsebpo.com` |
+| A stack: `anima-hermes` → `anima-eros`, no padrão das outras | A API em `api.eros.impulsebpo.com`, com a mesma chave |
 | A imagem: `nousresearch/hermes-agent` → o fork Ânima Eros (o VNC/XFCE continua) | Sessões, memórias, perfis, kanban, cron, skills e o `.env` interno (uma cópia) |
 | A marca, o design system e o idioma (pt-BR) | O login: OAuth no dashboard, usuário e senha no Webapp, a mesma `API_SERVER_KEY` |
-| O Forward Hostname no NPM: `hermes` → `anima-eros` | O vault do Obsidian, montado pelo `docker-compose.override.yml` |
+| O endereço: `eros.animahub.ai` (dashboard) e `eros.animahub.ai/app` (Webapp) | O vault do Obsidian, montado pelo `docker-compose.override.yml` |
+| O Forward Hostname no NPM: `hermes` → `anima-eros` | |
 
 ### Fase A: preparar, com a produção no ar
 
@@ -126,8 +128,7 @@ No `.env`, use os valores de hoje para os logins e as chaves continuarem valendo
 |---|---|
 | `APP_NAME` | `anima-eros` |
 | `NODE_AUTH_TOKEN` | token da conta de serviço (`read:packages`) |
-| `DASHBOARD_URL` | `https://eros.impulsebpo.com` |
-| `WEBAPP_URL` | o domínio do Webapp em uso. O NPM hoje aponta `app.eros.impulsebpo.com`, mas o `config.yaml` diz `app.hermes.impulsebpo.com`: confirme qual vale |
+| `DASHBOARD_URL`, `WEBAPP_URL` | os do modelo: `https://eros.animahub.ai` e `https://eros.animahub.ai/app` |
 | `DASHBOARD_USERNAME`, `DASHBOARD_PASSWORD`, `DASHBOARD_SESSION_SECRET` | `BASIC_AUTH_USERNAME`, `BASIC_AUTH_PASSWORD` e `BASIC_AUTH_SECRET` de `/srv/stacks/anima-hermes/.env` |
 | `API_SERVER_KEY` | o mesmo de `/srv/stacks/anima-hermes/.env` (os clientes da API usam essa chave) |
 | `MEM_LIMIT`, `CPU_LIMIT` | `8G`, `2.0` (os de hoje) |
@@ -151,7 +152,18 @@ make smoke SMOKE_FROM=/srv/appdata/anima-hermes/hermes SMOKE_EXCLUDE="anima-thei
 - **Se der banco corrompido** (`database disk image is malformed`): a cópia pegou um banco no meio de uma escrita da
   produção, que está no ar. Rode o teste de novo.
 
-**4. Copiar os dados com antecedência (opcional, encurta a janela)**
+**4. Preparar o domínio novo**
+
+- **DNS:** aponte `eros.animahub.ai` para o servidor.
+- **Proxy Host:** crie o de `eros.animahub.ai` como no [passo 3 da instalação](#3-criar-o-proxy-host-no-npm). Ele
+  responde 502 até o Eros subir, sem afetar a produção.
+- **Login OAuth do dashboard:** o cliente de hoje (`dashboard.oauth.client_id` no `config.yaml`) foi registrado na
+  Nous com o retorno em `https://eros.impulsebpo.com/auth/callback`. Inclua
+  `https://eros.animahub.ai/auth/callback` nele, na página
+  [Local Dashboards](https://portal.nousresearch.com/local-dashboards) do Nous Portal. Até lá, o login por OAuth no
+  domínio novo falha, mas o de usuário e senha funciona.
+
+**5. Copiar os dados com antecedência (opcional, encurta a janela)**
 
 ```sh
 make adopt FROM=/srv/appdata/anima-hermes/hermes
@@ -162,15 +174,15 @@ depois dela.
 
 ### Fase B: a troca, em janela de manutenção
 
-Avise quem usa o Eros: ele fica fora do ar da etapa 5 à 7.
+Avise quem usa o Eros: ele fica fora do ar da etapa 6 à 8, e o endereço passa a ser `eros.animahub.ai`.
 
-**5. Parar a produção antiga** (`stop`, não `down`: o container fica pronto para voltar)
+**6. Parar a produção antiga** (`stop`, não `down`: o container fica pronto para voltar)
 
 ```sh
 cd /srv/stacks/anima-hermes && docker compose stop
 ```
 
-**6. Copiar os dados e subir o Eros**
+**7. Copiar os dados e subir o Eros**
 
 ```sh
 cd /srv/stacks/anima-eros/deploy/docker
@@ -181,20 +193,19 @@ docker compose exec eros hermes plugins disable anima-brand    # a marca agora v
 make restart
 ```
 
-**7. Apontar o NPM para o Eros**
+**8. Apontar o NPM para o Eros**
 
-Nos Proxy Hosts de hoje, troque só o **Forward Hostname** para `anima-eros`. As portas continuam as mesmas:
+O Proxy Host de `eros.animahub.ai` já aponta para `anima-eros` (etapa 4). Nos Proxy Hosts antigos:
 
-| Domínio | Forward Hostname | Forward Port |
-|---|---|---|
-| `eros.impulsebpo.com` | `hermes` → `anima-eros` | `9119` |
-| `app.eros.impulsebpo.com` | `hermes` → `anima-eros` | `9120` |
-| `api.eros.impulsebpo.com` | `hermes` → `anima-eros` | `8642` |
+| Domínio | O que fazer |
+|---|---|
+| `api.eros.impulsebpo.com` | Forward Hostname `hermes` → `anima-eros`, porta `8642` (os clientes da API continuam iguais) |
+| `eros.impulsebpo.com`, `app.eros.impulsebpo.com` | Troque por um **Redirection Host** para `eros.animahub.ai` e `eros.animahub.ai/app`, ou desative |
 
-**8. Conferir**
+**9. Conferir**
 
-- O dashboard abre e o login OAuth funciona.
-- O Webapp abre em português e entra com usuário e senha.
+- `https://eros.animahub.ai` abre e o login OAuth funciona.
+- `https://eros.animahub.ai/app` abre em português e entra com usuário e senha.
 - As sessões antigas, as memórias, o kanban e os cron jobs estão lá (`docker compose exec eros hermes sessions list`).
 - Os canais (Telegram, WhatsApp…) respondem.
 - O VNC funciona e o vault aparece em `/opt/data/impulse/vault`.
@@ -209,7 +220,8 @@ cd /srv/stacks/anima-eros/deploy/docker && make down
 cd /srv/stacks/anima-hermes && docker compose start
 ```
 
-No NPM, aponte os três Proxy Hosts para `anima-hermes-hermes`, o nome do container antigo, e não para `hermes`.
+No NPM, volte os Proxy Hosts de `eros.impulsebpo.com`, `app.eros.impulsebpo.com` e `api.eros.impulsebpo.com` para
+`anima-hermes-hermes`, o nome do container antigo, e não para `hermes`.
 
 ### Depois da migração
 

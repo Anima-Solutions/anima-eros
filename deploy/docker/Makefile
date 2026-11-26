@@ -39,7 +39,7 @@ SCRIPT_ENV = env APP_NAME="$(APP_NAME)" APPDATA_DIR="$(APPDATA_DIR)/hermes" BACK
 
 .DEFAULT_GOAL := help
 .PHONY: help init env dirs info npm-check secret network \
-        build build-base up down restart logs ps shell configure update deploy \
+        build build-base up down restart logs ps shell configure npm-config update deploy \
         dev dev-down dev-logs dev-configure \
         backup backups restore smoke adopt prune
 
@@ -127,9 +127,31 @@ configure: ## pt-BR, Webapp e proxy confiável no config.yaml da Hermes (pode re
 	$(EXEC) hermes config set webapp.host 0.0.0.0; \
 	$(EXEC) hermes config set webapp.port 9120; \
 	$(EXEC) hermes config set webapp.public_url "$(WEBAPP_URL)"; \
+	[ -z "$(DASHBOARD_URL)" ] || $(EXEC) hermes config set dashboard.public_url "$(DASHBOARD_URL)"; \
 	$(EXEC) hermes config set dashboard.trusted_proxies "[\"$$subnet\"]"; \
 	echo "✔ Configurado (proxy confiável: $$subnet). Reiniciando..."
 	$(COMPOSE) restart $(SERVICE)
+
+npm-config: ## Imprime o bloco da aba Advanced do Proxy Host para servir o Webapp em /app
+	@prefix="$$(printf '%s' "$(WEBAPP_URL)" | sed -E 's#^https?://[^/]+##')"; \
+	[ -n "$$prefix" ] || { echo "• WEBAPP_URL ($(WEBAPP_URL)) não tem caminho: use um Proxy Host próprio para o Webapp (porta 9120)"; exit 0; }; \
+	echo "# Cole na aba Advanced do Proxy Host de $(DASHBOARD_URL) (Forward: $(APP_NAME):9119)"; \
+	echo "location = $$prefix { return 301 $$prefix/; }"; \
+	echo "location $$prefix/ {"; \
+	echo "  # O nome numa variável: o nginx do NPM recarrega mesmo com o Eros parado (o resolver do NPM resolve na hora)"; \
+	echo "  set \$$eros_webapp $(APP_NAME):9120;"; \
+	echo "  rewrite ^$$prefix/(.*)\$$ /\$$1 break;"; \
+	echo "  proxy_pass http://\$$eros_webapp;"; \
+	echo "  proxy_http_version 1.1;"; \
+	echo "  proxy_set_header Upgrade \$$http_upgrade;"; \
+	echo "  proxy_set_header Connection \$$http_connection;"; \
+	echo "  proxy_set_header Host \$$http_host;"; \
+	echo "  proxy_set_header X-Forwarded-Host \$$http_host;"; \
+	echo "  proxy_set_header X-Forwarded-Proto \$$scheme;"; \
+	echo "  proxy_set_header X-Forwarded-For \$$proxy_add_x_forwarded_for;"; \
+	echo "  proxy_set_header X-Forwarded-Prefix $$prefix;"; \
+	echo "  proxy_read_timeout 3600s;"; \
+	echo "}"
 
 update: ## git pull do repositório (somente fast-forward)
 	git -C "$(REPO_ROOT)" pull --ff-only

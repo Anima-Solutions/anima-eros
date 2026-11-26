@@ -36,22 +36,35 @@ a subir enquanto a imagem não existir.
 
 ## Rede e Nginx Proxy Manager
 
-O NPM chega ao container **pelo nome do container**, que é o `APP_NAME`:
+O NPM chega ao container **pelo nome do container** (`APP_NAME`). O padrão é um domínio só:
 
-| Serviço | Forward Hostname | Forward Port |
-|---|---|---|
-| Dashboard | `<APP_NAME>` | `9119` |
-| Webapp | `<APP_NAME>` | `9120` |
-| API compatível com OpenAI | `<APP_NAME>` | `8642` |
+| Endereço | Como chega |
+|---|---|
+| `https://eros.animahub.ai` (dashboard) | Proxy Host → Forward Hostname `<APP_NAME>`, porta `9119` |
+| `https://eros.animahub.ai/app` (Webapp) | No mesmo Proxy Host, o bloco da aba **Advanced** que o `make npm-config` imprime |
+| API compatível com OpenAI (opcional) | Um Proxy Host próprio (ex.: `api.eros.animahub.ai`) → `<APP_NAME>`, porta `8642` |
 
-Nos três: Scheme `http`, **Websockets Support** ligado, Let's Encrypt e Force SSL.
+No Proxy Host: Scheme `http`, **Websockets Support**, **Block Common Exploits**, Let's Encrypt, **Force SSL** e **HTTP/2**.
+
+O bloco do `/app`:
+
+- **Tira o prefixo e avisa a Hermes.** Ele remove o `/app` do caminho e manda `X-Forwarded-Prefix: /app`. Com isso, a
+  Hermes monta os endereços dos arquivos, do login e do WebSocket já com o prefixo.
+- **Recarrega mesmo com o Eros parado.** O nome do container fica numa variável, resolvida a cada requisição pelo
+  `resolver` do NPM. Sem isso, um Eros parado impediria o nginx do NPM de recarregar, e todos os sites do NPM
+  ficariam fora do ar.
+- **Não mistura as sessões.** O dashboard e o Webapp no mesmo domínio guardam cookies separados: os do Webapp ficam
+  em `/app`, com outro nome.
+
+Um subdomínio próprio para o Webapp também funciona: `WEBAPP_URL=https://app.<domínio>` e um Proxy Host para
+`<APP_NAME>:9120`.
 
 > **Nunca use o nome do serviço como Forward Hostname.** O Docker registra o nome do serviço (`eros`, `hermes`…) como
 > apelido do container em toda rede de que ele participa. Duas stacks com o mesmo nome de serviço na rede do NPM
 > dividem o tráfego entre si, e foi isso que fez a produção mostrar a tela da demo. O nome do container é único.
 
-O `make configure` lê a sub-rede da `PROXY_NETWORK` e a grava em `dashboard.trusted_proxies`, para a Hermes confiar no
-`X-Forwarded-Proto: https` do NPM.
+O `make configure` lê a sub-rede da `PROXY_NETWORK` e a grava em `dashboard.trusted_proxies`, para a Hermes confiar
+nos cabeçalhos `X-Forwarded-*` do NPM.
 
 ## Variáveis do `.env`
 
@@ -79,7 +92,8 @@ Gere segredos com `make secret` e senhas com `openssl rand -hex 16`.
 | `make init` | Cria o `.env` (modo 600) e a pasta de dados |
 | `make build` | Gera a imagem base e a final |
 | `make up` / `make down` / `make restart` | Sobe, para e reinicia |
-| `make configure` | Ativa o pt-BR e configura o Webapp e o proxy confiável. Pode ser repetido |
+| `make configure` | Ativa o pt-BR e grava as URLs públicas, o Webapp e o proxy confiável. Pode ser repetido |
+| `make npm-config` | Imprime o bloco da aba Advanced do NPM para o Webapp em `/app` |
 | `make logs` / `make ps` / `make shell` | Logs, status e shell no container |
 | `make deploy` | `git pull`, build, up e limpeza das imagens órfãs |
 | `make backup` / `make backups` / `make restore FILE=...` | Backup com o container parado, lista de backups e restauração |
