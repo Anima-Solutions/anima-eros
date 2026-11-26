@@ -37,6 +37,7 @@ afterEach(() => {
   $gateway.set(null)
   $gatewayState.set('idle')
   resetAppLocaleRegistry()
+  window.localStorage.clear()
   $requestedLocale.set(null)
   route('default')
   Reflect.deleteProperty(window, 'hermesDesktop')
@@ -246,5 +247,28 @@ it('promotes a saved pack language that arrives after the OS-language probe', as
   expect(screen.getByTestId('locale').textContent).toBe('en')
 
   act(() => $gateway.set({ request: koPackRequest() } as never))
+  await waitFor(() => expect(screen.getByTestId('locale').textContent).toBe('ko'))
+})
+
+// A reload paints the pack language from the last sync for this scope, before
+// the gateway (seconds away on a cold backend) answers again.
+it('paints the last synced pack language on a fresh mount before the gateway answers', async () => {
+  window.hermesDesktop = { api: vi.fn(async () => ({ display: { language: 'ko' } })) } as never
+  act(() => $gateway.set({ request: koPackRequest() } as never))
+  mountWithOpenSocket()
+  await waitFor(() => expect(screen.getByTestId('locale').textContent).toBe('ko'))
+
+  cleanup()
+  resetAppLocaleRegistry()
+  act(() => {
+    $gateway.set(null)
+    $gatewayState.set('connecting')
+  })
+  render(
+    <I18nProvider>
+      <Probe />
+    </I18nProvider>
+  )
+
   await waitFor(() => expect(screen.getByTestId('locale').textContent).toBe('ko'))
 })

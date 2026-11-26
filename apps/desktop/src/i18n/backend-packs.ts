@@ -16,8 +16,9 @@ import { isRecord } from '@hermes/shared/i18n'
 
 import { isMissingRpcMethod } from '@/lib/gateway-rpc'
 
+import type { BackendLocaleRegistration } from './backend-pack-cache'
 import { isBundledLocale } from './catalog'
-import { type AppLocaleRegistration, normalizeLocaleId, replaceAppLocaleSource } from './registry'
+import { normalizeLocaleId, replaceAppLocaleSource } from './registry'
 
 export type BackendLocaleRequest = <T>(method: string, params: Record<string, unknown>) => Promise<T>
 
@@ -88,13 +89,14 @@ async function tolerant<T>(call: () => Promise<T>): Promise<T | null> {
  * Pull the backend's language list plus the desktop pack for `lang` and swap
  * them into the registry's `backend` layer. `isCurrent` guards the apply: a
  * profile switch or a newer language pick mid-flight must not write a stale
- * pack over the winner's.
+ * pack over the winner's. Returns the registered layer (for the reload cache),
+ * or null when nothing was registered: the scope moved on, or no method answered.
  */
 export async function syncBackendLocalePacks(
   request: BackendLocaleRequest,
   lang: null | string,
   isCurrent: () => boolean = () => true
-): Promise<void> {
+): Promise<BackendLocaleRegistration[] | null> {
   const wanted = lang ? normalizeLocaleId(lang) : ''
 
   const [languages, catalog] = await Promise.all([
@@ -103,15 +105,15 @@ export async function syncBackendLocalePacks(
   ])
 
   if (!isCurrent()) {
-    return
+    return null
   }
 
   if (languages === null && catalog === null) {
     // Nothing answered (old backend, socket dropped): keep the current layer.
-    return
+    return null
   }
 
-  const registrations = new Map<string, { id: string } & AppLocaleRegistration>()
+  const registrations = new Map<string, BackendLocaleRegistration>()
 
   for (const row of languageRows(languages)) {
     const id = normalizeLocaleId(row.id)
@@ -132,5 +134,8 @@ export async function syncBackendLocalePacks(
     registrations.set(wanted, { ...existing, translations: messages })
   }
 
-  replaceAppLocaleSource('backend', [...registrations.values()])
+  const layer = [...registrations.values()]
+  replaceAppLocaleSource('backend', layer)
+
+  return layer
 }

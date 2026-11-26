@@ -120,7 +120,7 @@ describe('syncBackendLocalePacks', () => {
       throw new JsonRpcGatewayError('unknown method: i18n.languages', { code: -32601 })
     }
 
-    await expect(syncBackendLocalePacks(request, 'pl')).resolves.toBeUndefined()
+    await expect(syncBackendLocalePacks(request, 'pl')).resolves.toBeNull()
 
     expect(debug).not.toHaveBeenCalled()
     expect(isRegisteredLocale('pl')).toBe(true)

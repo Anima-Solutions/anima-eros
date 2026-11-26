@@ -5,9 +5,10 @@ import { $gateway } from '@/store/gateway'
 import { $activeGatewayProfile } from '@/store/profile'
 import { $connection, $gatewayState } from '@/store/session'
 
+import { readCachedBackendLayer, writeCachedBackendLayer } from './backend-pack-cache'
 import { syncBackendLocalePacks } from './backend-packs'
 import { I18nProvider } from './context'
-import { unregisterAppLocaleSource } from './registry'
+import { replaceAppLocaleSource, unregisterAppLocaleSource } from './registry'
 import { $requestedLocale } from './runtime'
 
 /** Keep gateway/store imports outside the shared i18n context's import graph. */
@@ -47,7 +48,14 @@ function useBackendLocalePacks(scopeKey: string): void {
   const open = gatewayState === 'open'
 
   useEffect(() => {
-    unregisterAppLocaleSource('backend')
+    // This scope's last layer paints now; the live sync below replaces it once the gateway answers.
+    const cached = readCachedBackendLayer(scopeKey)
+
+    if (cached) {
+      replaceAppLocaleSource('backend', cached)
+    } else {
+      unregisterAppLocaleSource('backend')
+    }
   }, [scopeKey])
 
   useEffect(() => {
@@ -61,7 +69,11 @@ function useBackendLocalePacks(scopeKey: string): void {
       (method, params) => gateway.request(method, params),
       requested,
       () => current
-    )
+    ).then(layer => {
+      if (layer) {
+        writeCachedBackendLayer(scopeKey, layer)
+      }
+    })
 
     return () => {
       current = false
