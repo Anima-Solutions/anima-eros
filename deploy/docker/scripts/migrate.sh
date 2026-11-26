@@ -3,9 +3,11 @@
 # Uso (pelo make migrate): migrate.sh <pasta de dados antiga>   (ex.: /srv/appdata/anima-hermes/hermes)
 #
 # Traz para a instalação nova:
-#   - o agente principal (a raiz): persona, memórias, skills, tarefas agendadas, histórico, projetos e
-#     os plugins instalados (menos o anima-brand, que a imagem já traz). O config.yaml da raiz NÃO vem:
-#     a instalação nova tem o seu, feito pelo make configure e pelo hermes setup.
+#   - o agente principal (a raiz): persona, memórias (e as pendentes de aprovação), skills, tarefas
+#     agendadas, histórico, projetos, a foto e a seção no Bot Mode, as preferências da interface e os
+#     plugins instalados (menos o anima-brand, que a imagem já traz). O config.yaml da raiz NÃO vem: a
+#     instalação nova tem o seu, feito pelo make configure e pelo hermes setup. Uma cópia do antigo fica em
+#     migracao/config.antigo.yaml, só para consulta.
 #   - cada agente (perfil), sem credenciais, estado do processo e caches (migrate-profile.rules);
 #   - as pastas de trabalho da raiz (MIGRATE_WORKDIRS), nos mesmos caminhos;
 #   - do .env, só as variáveis aprovadas (migrate-env-keys.txt).
@@ -88,15 +90,23 @@ echo
 
 # --- 1. O agente principal ----------------------------------------------------------------------
 echo "1. Agente principal (raiz)"
-for d in memories skills cron; do
+for d in memories skills cron assets pending; do
   [ -d "$src/$d" ] || continue
   echo "    $d/"
   sync "$src/$d/" "$dest/$d/" --exclude '/ticker_*' --exclude '*.lock'
 done
-if [ -f "$src/SOUL.md" ]; then
-  [ "$dry" = 1 ] || rsync -aHAX "$src/SOUL.md" "$dest/"
-  echo "    SOUL.md"
+for f in SOUL.md profile.yaml ui-preferences.json; do
+  [ -f "$src/$f" ] || continue
+  [ "$dry" = 1 ] || rsync -aHAX "$src/$f" "$dest/"
+  echo "    $f"
+done
+# O config.yaml antigo fica ao lado, só para consulta: a Hermes não lê esta pasta.
+if [ "$dry" != 1 ]; then
+  mkdir -p "$dest/migracao"
+  install -m 600 "$src/config.yaml" "$dest/migracao/config.antigo.yaml"
+  [ "$(id -u)" != 0 ] || chown -R "$owner" "$dest/migracao"
 fi
+echo "    config.yaml antigo → migracao/config.antigo.yaml (só consulta)"
 echo "    bancos: histórico, projetos, respostas da API, métricas compartilhadas"
 for db in state.db projects.db response_store.db shared-state.db; do sync_db "$db" "$src" "$dest"; done
 sync_plugins plugins "$src" "$dest"

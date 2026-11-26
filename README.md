@@ -115,7 +115,7 @@ histórico, os projetos e as pastas de trabalho.
 | O quê | Detalhe |
 |---|---|
 | 13 agentes | os 6 `impulse`, `meta-ads-bot`, `google-ads-bot`, `ctwa-meta-bot`, `anima-logus-bot`, `anima-projetos-bot`, `anima-theia` e `editorfat`. Cada um com persona, memórias, skills, tarefas agendadas, configuração, histórico de conversas e projetos |
-| O agente principal | persona, memórias, skills, histórico, projetos e os plugins `gmail`, `mcp-serve` e `quota` |
+| O agente principal | persona, memórias (também as pendentes de aprovação), skills, histórico, projetos, a foto e a seção no Bot Mode, as preferências da interface e os plugins `gmail`, `mcp-serve` e `quota` |
 | Pastas de trabalho | `impulse`, `anima-theia`, `receita-federal`, `clickup-doc` e `attachments`, nos mesmos caminhos em `/opt/data` |
 | Do `.env` de cada agente | só as variáveis de [`migrate-env-keys.txt`](deploy/docker/scripts/migrate-env-keys.txt): chaves de API, tokens dos bots, quem pode falar com cada bot e os caminhos dos scripts do Impulse |
 
@@ -125,7 +125,7 @@ histórico, os projetos e as pastas de trabalho.
 |---|---|
 | Os logins (Anthropic, OpenAI Codex, Nous, xAI) | Ficam no `auth.json`, que guarda o estado mais opaco da instalação antiga |
 | O login do ClickUp nos agentes `impulse`, `impulse-estrategista` e `impulse-gerente` | É um login OAuth do MCP (`mcp-tokens`), também refeito |
-| O `config.yaml` do agente principal | O da instalação nova é feito pelo `make configure` e pelo `hermes setup` |
+| O `config.yaml` do agente principal | O da instalação nova é feito pelo `make configure` e pelo `hermes setup`. O antigo fica em `/opt/data/migracao/config.antigo.yaml`, só para consulta |
 | A pasta `home` de cada agente (logins do gh, git, npm…) e os caches | Configuração de máquina, que a Hermes recria ou que se refaz quando for preciso |
 
 **Fica de fora:**
@@ -134,7 +134,7 @@ histórico, os projetos e as pastas de trabalho.
 |---|---|
 | `profiles/default` e `profiles/graphify-out` | Não são agentes: uma pasta de trabalho solta e o cache de uma ferramenta |
 | O Kanban | Está vazio na instalação antiga |
-| `anima-doc`, `projetos`, `scripts`, `pets`, `uploads`, `graphify-out` (da raiz) | Nenhum agente usa. Ficam guardados num arquivo em `/srv/backups/anima-eros` |
+| Pastas e arquivos soltos que nenhum agente usa: `anima-doc`, `projetos`, `scripts`, `pets`, `uploads`, `graphify-out`, `scratch`, `Diagnostico-Anima-15deAgosto.html`, `anima-site-screenshot.png`, `prompt-agente-especialista-anima.md`, os temas antigos (`skins`, `dashboard-themes`) e os perfis `default` e `graphify-out` | Ficam guardados num arquivo em `/srv/backups/anima-eros` |
 | Outras variáveis dos `.env` (`HERMES_MANAGED_DIR`, `TERMINAL_*`, `*_DEBUG`…) | Eram ajustes da instalação antiga. O `make migrate` lista cada uma que ficou para trás |
 
 O filtro completo do que não vem de cada agente está em
@@ -230,6 +230,10 @@ make restart
 
 Se o login do ClickUp pedir um navegador que o servidor não tem, use `mcp login clickup --flow device`.
 
+O agente principal começa com a configuração nova. A antiga fica em `/opt/data/migracao/config.antigo.yaml` para
+consulta. O ClickUp do agente principal estava desligado nela, então não há o que refazer. Se notar que falta algum
+ajuste dele, refaça com `docker compose exec eros hermes config set <chave> <valor>`.
+
 **7. Conferir pelo dashboard** (`https://eros.animahub.ai`)
 
 Teste pelo dashboard. O Webapp (`/app`) só conversa com os agentes que estão no ar, então enquanto eles estiverem
@@ -248,7 +252,9 @@ antiga por cima.
 **8. Guardar as pastas que não migram**
 
 ```sh
-make migrate-archive FROM=/srv/appdata/anima-hermes/hermes ARCHIVE="anima-doc projetos scripts pets uploads graphify-out"
+make migrate-archive FROM=/srv/appdata/anima-hermes/hermes ARCHIVE="anima-doc projetos scripts pets uploads \
+  graphify-out scratch Diagnostico-Anima-15deAgosto.html anima-site-screenshot.png prompt-agente-especialista-anima.md \
+  skins dashboard-themes profiles/default profiles/graphify-out"
 ```
 
 O arquivo fica em `/srv/backups/anima-eros/anima-eros_legado_<data>.tar.zst`. A retenção do `make backup` não o apaga.

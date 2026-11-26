@@ -120,8 +120,9 @@ O passo a passo está no [guia de migração](../../README.md#guia-de-migração
 
 - **O destino é uma instalação nova e parada.** O `make migrate` exige o container parado e um `config.yaml` já
   feito pelo `make configure` e pelo `hermes setup`. O `config.yaml` da raiz nunca é copiado.
-- **A raiz:** vêm a persona, as memórias, as skills, as tarefas agendadas, os bancos (histórico, projetos, respostas
-  da API) e os plugins, menos o `anima-brand`.
+- **A raiz:** vêm a persona, as memórias (também as pendentes), as skills, as tarefas agendadas, os bancos (histórico,
+  projetos, respostas da API), a foto e a seção no Bot Mode (`profile.yaml`, `assets`), as preferências da interface
+  e os plugins, menos o `anima-brand`. O `config.yaml` antigo fica em `migracao/config.antigo.yaml`, só para consulta.
 - **Cada agente:** vem a pasta inteira, menos o que
   [`scripts/migrate-profile.rules`](scripts/migrate-profile.rules) exclui: credenciais e logins, o `home` do agente,
   o estado do processo e os caches. A lista segue a do `hermes profile export`. `MIGRATE_SKIP_PROFILES` diz quais
