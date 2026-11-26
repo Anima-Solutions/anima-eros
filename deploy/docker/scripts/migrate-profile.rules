@@ -1,0 +1,96 @@
+# Filtro do rsync para cada agente (perfil) copiado pelo migrate.sh. Os caminhos com "/" no início
+# valem a partir da raiz do perfil. O que este filtro deixa de fora:
+#
+# - Credenciais e logins: são refeitos na instalação nova. Do .env vêm só as variáveis de
+#   migrate-env-keys.txt, que o migrate-env.py grava à parte. A lista segue
+#   PROFILE_CREDENTIAL_PATHS em hermes_cli/profiles.py, a mesma que o `hermes profile export` usa.
+# - O estado do processo e os caches: a Hermes recria tudo ao subir.
+#
+# Arquivo excluído também não é apagado no destino: o .env da instalação nova e o
+# gateway.parked sobrevivem a uma nova rodada.
+
+# --- Credenciais e logins -----------------------------------------------------------
+- /.env
+- /.env.*
+- /.op.env
+- /auth.json
+- /auth.json.*
+- /auth/
+- /.anthropic_oauth.json
+- /.copilot_jwt.json
+- /npmrc
+- /google_*.json
+- /google_chat_user_*
+- /slack_tokens.json
+- /honcho.json
+- /mem0.json
+- /webhook_subscriptions.json
+- /teams_pipeline_store.json
+- /feishu_comment_pairing.json
+- /bws_cache*.json
+- /op_cache.json
+- /photon-sidecar.json
+- /gateway-connection*.json*
+- /mcp-tokens/
+- /vault/
+- /pairing/
+- /platforms/pairing/
+- /whatsapp/session/
+- /platforms/whatsapp/session/
+- /matrix/store/
+- /platforms/matrix/store/
+- /weixin/accounts/
+- /browser-profile/
+- /browser-profiles/
+- /browser_profiles/
+- /browser_auth/
+- /bot-desktop/
+- /webapp/
+- /chrome-debug/
+- /proxy/
+- /workspace/meetings/node_token.json
+# O HOME dos comandos do agente: logins do gh, git, ssh, npm e das CLIs das skills
+- /home/
+# Cópias que as atualizações e migrações da Hermes guardam
+- /backups/
+- /state-snapshots/
+- /backend_migration/
+- /backend_migration.json
+- /config.yaml.bak*
+- /config.yaml.corrupt.*
+
+# --- Plugins que a imagem nova já traz ------------------------------------------------
+- /plugins/anima-brand/
+
+# --- Estado do processo ----------------------------------------------------------------
+- /gateway.parked
+- /gateway.lock
+- /gateway.pid
+- /gateway_state.json
+- /gateway/
+- /processes.json*
+- /*.lock
+- /.*.lock
+- /cron/ticker_*
+- /cron/*.lock
+
+# --- Caches (a Hermes recria) ----------------------------------------------------------
+- /cache/
+- /installs/
+- /tools/
+- /runtime/
+- /logs/
+- /image_cache/
+- /audio_cache/
+- /document_cache/
+- /browser_screenshots/
+- /checkpoints/
+- /sandboxes/
+- /plugin-update-checks/
+- /provider_models_cache.json*
+- /context_length_cache.yaml*
+- /.skills_prompt_snapshot.json
+- __pycache__/
+- *.pyc
+- *.sock
+- *.tmp

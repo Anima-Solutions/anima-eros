@@ -5,7 +5,8 @@ com o design system Ânima (`@anima-solutions/design-system`), a marca Ânima Er
 Um container reúne o gateway, o dashboard, o Webapp e a API compatível com OpenAI.
 
 - [Guia de instalação](#guia-de-instalação): uma instalação nova, com dados próprios.
-- [Guia de migração](#guia-de-migração): troca o Hermes que já roda em produção pelo Ânima Eros, levando os dados.
+- [Guia de migração](#guia-de-migração): troca o Hermes que já roda em produção pelo Ânima Eros, numa instalação
+  nova, trazendo só os agentes e os dados.
 
 A referência da stack (arquivos, variáveis, comandos, backup e teste) está em
 [`deploy/docker/README.md`](deploy/docker/README.md).
@@ -48,6 +49,8 @@ Preencha o `.env`:
 - `DASHBOARD_PASSWORD`: gere com `openssl rand -hex 16`.
 - `DASHBOARD_SESSION_SECRET`: gere com `make secret`.
 - `API_SERVER_KEY`: só se for ligar a API; gere com `make secret`.
+- `DASHBOARD_OAUTH_CLIENT_ID`: opcional, para o login pela conta Nous além do usuário e senha. É o `agent:…` do
+  registro no Nous Portal (`hermes dashboard register`).
 
 Se o servidor tiver montagens próprias, como um vault do Obsidian, copie `docker-compose.override.example.yml` para
 `docker-compose.override.yml` e ajuste.
@@ -92,28 +95,66 @@ make deploy
 
 ## Guia de migração
 
-Troca o Hermes que roda hoje no `vps_anima01` pelo Ânima Eros, levando os dados. Hoje ele está na stack
-`/srv/stacks/anima-hermes`, no container `anima-hermes-hermes`, com dados em `/srv/appdata/anima-hermes/hermes`.
+Substitui o Hermes que roda hoje no `vps_anima01` pelo Ânima Eros. Hoje ele está na stack `/srv/stacks/anima-hermes`,
+no container `anima-hermes-hermes`, com dados em `/srv/appdata/anima-hermes/hermes`.
 
-- **A stack antiga e os dados dela não são alterados.** O Eros sobe numa stack nova (`/srv/stacks/anima-eros`), com
-  uma **cópia** dos dados. A instalação antiga fica parada, intacta, e voltar atrás leva um minuto.
-- **A troca só acontece depois que o teste com a cópia passar.**
+A instalação antiga foi montada aos poucos e acumulou ajustes manuais, por isso **ela não é copiada inteira**. O Eros
+sobe como uma [instalação nova](#guia-de-instalação), e o `make migrate` traz para ela só os dados: os agentes, o
+histórico, os projetos e as pastas de trabalho.
 
-### O que muda e o que não muda
+- **A instalação antiga não é alterada.** O `make migrate` só lê os dados dela. Ela fica parada, intacta, como plano
+  de volta.
+- **Os dois rodam lado a lado durante o teste.** Os agentes chegam ao Eros **estacionados**: sem bots e sem tarefas
+  agendadas. Os bots continuam respondendo pela instalação antiga até a troca.
+- **A troca é curta.** Ela para a instalação antiga, copia o que mudou desde o teste e liga os bots no Eros.
 
-| Muda | Fica igual |
+### O que vem, o que é refeito e o que fica
+
+**Vem para o Eros:**
+
+| O quê | Detalhe |
 |---|---|
-| A stack: `anima-hermes` → `anima-eros`, no padrão das outras | A API em `api.eros.impulsebpo.com`, com a mesma chave |
-| A imagem: `nousresearch/hermes-agent` → o fork Ânima Eros (o VNC/XFCE continua) | Sessões, memórias, perfis, kanban, cron, skills e o `.env` interno (uma cópia) |
-| A marca, o design system e o idioma (pt-BR) | O login: OAuth no dashboard, usuário e senha no Webapp, a mesma `API_SERVER_KEY` |
-| O endereço: `eros.animahub.ai` (dashboard) e `eros.animahub.ai/app` (Webapp) | O vault do Obsidian, montado pelo `docker-compose.override.yml` |
-| O Forward Hostname no NPM: `hermes` → `anima-eros` | |
+| 13 agentes | os 6 `impulse`, `meta-ads-bot`, `google-ads-bot`, `ctwa-meta-bot`, `anima-logus-bot`, `anima-projetos-bot`, `anima-theia` e `editorfat`. Cada um com persona, memórias, skills, tarefas agendadas, configuração, histórico de conversas e projetos |
+| O agente principal | persona, memórias, skills, histórico, projetos e os plugins `gmail`, `mcp-serve` e `quota` |
+| Pastas de trabalho | `impulse`, `anima-theia`, `receita-federal`, `clickup-doc` e `attachments`, nos mesmos caminhos em `/opt/data` |
+| Do `.env` de cada agente | só as variáveis de [`migrate-env-keys.txt`](deploy/docker/scripts/migrate-env-keys.txt): chaves de API, tokens dos bots, quem pode falar com cada bot e os caminhos dos scripts do Impulse |
 
-### Fase A: preparar, com a produção no ar
+**É refeito na instalação nova:**
 
-Nada desta fase toca na produção. Ela só lê os dados para copiar.
+| O quê | Por quê |
+|---|---|
+| Os logins (Anthropic, OpenAI Codex, Nous, xAI) | Ficam no `auth.json`, que guarda o estado mais opaco da instalação antiga |
+| O login do ClickUp nos agentes `impulse`, `impulse-estrategista` e `impulse-gerente` | É um login OAuth do MCP (`mcp-tokens`), também refeito |
+| O `config.yaml` do agente principal | O da instalação nova é feito pelo `make configure` e pelo `hermes setup` |
+| A pasta `home` de cada agente (logins do gh, git, npm…) e os caches | Configuração de máquina, que a Hermes recria ou que se refaz quando for preciso |
 
-**1. Clonar e criar o `.env`**
+**Fica de fora:**
+
+| O quê | Destino |
+|---|---|
+| `profiles/default` e `profiles/graphify-out` | Não são agentes: uma pasta de trabalho solta e o cache de uma ferramenta |
+| O Kanban | Está vazio na instalação antiga |
+| `anima-doc`, `projetos`, `scripts`, `pets`, `uploads`, `graphify-out` (da raiz) | Nenhum agente usa. Ficam guardados num arquivo em `/srv/backups/anima-eros` |
+| Outras variáveis dos `.env` (`HERMES_MANAGED_DIR`, `TERMINAL_*`, `*_DEBUG`…) | Eram ajustes da instalação antiga. O `make migrate` lista cada uma que ficou para trás |
+
+O filtro completo do que não vem de cada agente está em
+[`migrate-profile.rules`](deploy/docker/scripts/migrate-profile.rules).
+
+### Fase A: instalar e migrar, com a produção no ar
+
+Nada desta fase altera a instalação antiga. Os bots e as tarefas agendadas continuam nela.
+
+**1. Preparar o domínio**
+
+- **DNS:** aponte `eros.animahub.ai` para o servidor.
+- **NPM:** crie o Proxy Host de `eros.animahub.ai` como no
+  [passo 3 da instalação](#3-criar-o-proxy-host-no-npm). Ele responde 502 até o Eros subir, sem afetar a produção.
+- **Login OAuth do dashboard:** o cliente de hoje foi registrado na Nous com o retorno em
+  `https://eros.impulsebpo.com/auth/callback`. Na página
+  [Local Dashboards](https://portal.nousresearch.com/local-dashboards) do Nous Portal, inclua
+  `https://eros.animahub.ai/auth/callback` nele.
+
+**2. Clonar e criar o `.env`**
 
 ```sh
 git clone git@github_anima:Anima-Solutions/anima-eros.git /srv/stacks/anima-eros
@@ -126,94 +167,144 @@ No `.env`, use os valores de hoje para os logins e as chaves continuarem valendo
 
 | Novo `.env` | Valor |
 |---|---|
-| `APP_NAME` | `anima-eros` |
-| `NODE_AUTH_TOKEN` | token da conta de serviço (`read:packages`) |
-| `DASHBOARD_URL`, `WEBAPP_URL` | os do modelo: `https://eros.animahub.ai` e `https://eros.animahub.ai/app` |
+| `NODE_AUTH_TOKEN` | token da conta de serviço (`read:packages`); descomente a linha |
 | `DASHBOARD_USERNAME`, `DASHBOARD_PASSWORD`, `DASHBOARD_SESSION_SECRET` | `BASIC_AUTH_USERNAME`, `BASIC_AUTH_PASSWORD` e `BASIC_AUTH_SECRET` de `/srv/stacks/anima-hermes/.env` |
 | `API_SERVER_KEY` | o mesmo de `/srv/stacks/anima-hermes/.env` (os clientes da API usam essa chave) |
-| `MEM_LIMIT`, `CPU_LIMIT` | `8G`, `2.0` (os de hoje) |
+| `DASHBOARD_OAUTH_CLIENT_ID` | o `HERMES_DASHBOARD_OAUTH_CLIENT_ID` de `/srv/appdata/anima-hermes/hermes/.env` |
 
-**2. Construir a imagem**
+O resto fica como veio do modelo. Confira com `make info`.
 
-```sh
-make build         # ≈10–15 min; usa CPU, mas a produção segue no ar
-```
-
-**3. Testar a imagem sobre uma cópia dos dados**
+**3. Instalar o Eros**
 
 ```sh
-make smoke SMOKE_FROM=/srv/appdata/anima-hermes/hermes SMOKE_EXCLUDE="anima-theia"
+make deploy        # build (≈10–15 min na primeira vez) e up
+make configure     # pt-BR, URLs públicas, Webapp e proxy confiável
+docker compose exec eros hermes setup          # o agente principal: provedor, login e modelo
 ```
 
-- **O que acontece:** o teste copia os dados para uma pasta à parte, sem caches e sem o workspace `anima-theia`
-  (45 GB). Depois sobe a imagem nova **sem rede**, para não disputar mensagens com a produção, e confere a migração
-  dos bancos, a CLI, o dashboard, o Webapp, o pt-BR e o VNC.
-- **Resultado esperado:** `✔ Teste aprovado`. Não siga para a Fase B sem ele.
-- **Se der banco corrompido** (`database disk image is malformed`): a cópia pegou um banco no meio de uma escrita da
-  produção, que está no ar. Rode o teste de novo.
-
-**4. Preparar o domínio novo**
-
-- **DNS:** aponte `eros.animahub.ai` para o servidor.
-- **Proxy Host:** crie o de `eros.animahub.ai` como no [passo 3 da instalação](#3-criar-o-proxy-host-no-npm). Ele
-  responde 502 até o Eros subir, sem afetar a produção.
-- **Login OAuth do dashboard:** o cliente de hoje (`dashboard.oauth.client_id` no `config.yaml`) foi registrado na
-  Nous com o retorno em `https://eros.impulsebpo.com/auth/callback`. Inclua
-  `https://eros.animahub.ai/auth/callback` nele, na página
-  [Local Dashboards](https://portal.nousresearch.com/local-dashboards) do Nous Portal. Até lá, o login por OAuth no
-  domínio novo falha, mas o de usuário e senha funciona.
-
-**5. Copiar os dados com antecedência (opcional, encurta a janela)**
+No `hermes setup`, escolha o provedor e o modelo do agente principal e faça o login. Depois, faça os logins que os
+outros agentes usam. Os agentes leem os logins da raiz.
 
 ```sh
-make adopt FROM=/srv/appdata/anima-hermes/hermes
+docker compose exec eros hermes auth add anthropic --no-browser      # a maioria dos agentes (Claude)
+docker compose exec eros hermes auth add openai-codex --no-browser   # o editorfat
+docker compose exec eros hermes auth add nous --no-browser           # opcional: Nous Portal
+docker compose exec eros hermes auth add xai-oauth --no-browser      # opcional: Grok
 ```
 
-A primeira cópia leva 64 GB e pode demorar. Feita agora, com a produção no ar, a cópia da janela só leva o que mudou
-depois dela.
+Com `--no-browser`, o comando mostra um link: abra no seu computador, autorize e, se ele pedir, cole o código de volta
+no terminal.
+
+**4. Simular a migração**
+
+O `make migrate` exige o Eros parado.
+
+```sh
+make down
+make migrate FROM=/srv/appdata/anima-hermes/hermes DRY=1
+```
+
+A simulação não grava nada. Ela mostra, para a raiz e para cada agente, quantos arquivos viriam, quais variáveis do
+`.env` vêm e quais ficam para trás, e quais logins precisam ser refeitos. Revise a lista. Se uma variável que ficou
+para trás for necessária, inclua o nome dela em `scripts/migrate-env-keys.txt` e simule de novo.
+
+**5. Migrar**
+
+```sh
+make migrate FROM=/srv/appdata/anima-hermes/hermes     # a primeira vez copia ≈55 GB e demora
+make up
+```
+
+Os agentes chegam estacionados. No fim, o comando confirma quantos agentes migrou.
+
+**6. Ajustes depois da migração**
+
+```sh
+docker compose exec eros hermes -p anima-theia plugins disable anima-brand    # a marca agora vem na imagem
+docker compose exec eros hermes plugins enable mcp-serve quota                # os plugins do agente principal
+docker compose exec eros hermes -p impulse mcp login clickup                  # login do ClickUp, um por agente
+docker compose exec eros hermes -p impulse-estrategista mcp login clickup
+docker compose exec eros hermes -p impulse-gerente mcp login clickup
+make restart
+```
+
+Se o login do ClickUp pedir um navegador que o servidor não tem, use `mcp login clickup --flow device`.
+
+**7. Conferir pelo dashboard** (`https://eros.animahub.ai`)
+
+Teste pelo dashboard. O Webapp (`/app`) só conversa com os agentes que estão no ar, então enquanto eles estiverem
+estacionados ele atende apenas o agente principal.
+
+- Os 13 agentes aparecem, com as conversas antigas.
+- Abra uma conversa nova com dois ou três agentes, incluindo o `editorfat`, que usa outro provedor. Eles respondem, com
+  a persona e as memórias de antes.
+- Os projetos estão lá, e um agente acha os arquivos dele, por exemplo o `impulse` com `/opt/data/impulse/painel`.
+- O vault do Obsidian aparece em `/opt/data/impulse/vault`.
+- `docker compose exec eros hermes gateway status` lista os 13 agentes como `parked`.
+
+O que você conversar no Eros durante o teste se perde na troca: a etapa 10 copia de novo o histórico da instalação
+antiga por cima.
+
+**8. Guardar as pastas que não migram**
+
+```sh
+make migrate-archive FROM=/srv/appdata/anima-hermes/hermes ARCHIVE="anima-doc projetos scripts pets uploads graphify-out"
+```
+
+O arquivo fica em `/srv/backups/anima-eros/anima-eros_legado_<data>.tar.zst`. A retenção do `make backup` não o apaga.
 
 ### Fase B: a troca, em janela de manutenção
 
-Avise quem usa o Eros: ele fica fora do ar da etapa 6 à 8, e o endereço passa a ser `eros.animahub.ai`.
+Avise quem usa o Eros: os bots ficam fora do ar da etapa 9 à 11, e o endereço do dashboard passa a ser
+`eros.animahub.ai`.
 
-**6. Parar a produção antiga** (`stop`, não `down`: o container fica pronto para voltar)
+**9. Parar a instalação antiga** (`stop`, não `down`: o container fica pronto para voltar)
 
 ```sh
 cd /srv/stacks/anima-hermes && docker compose stop
 ```
 
-**7. Copiar os dados e subir o Eros**
+**10. Trazer o que mudou desde o teste**
 
 ```sh
 cd /srv/stacks/anima-eros/deploy/docker
-make adopt FROM=/srv/appdata/anima-hermes/hermes     # com a origem parada, a cópia sai consistente
+make down
+make migrate FROM=/srv/appdata/anima-hermes/hermes     # com a origem parada, os bancos saem consistentes
 make up
-make configure
-docker compose exec eros hermes plugins disable anima-brand    # a marca agora vem na imagem
-make restart
+docker compose exec eros hermes -p anima-theia plugins disable anima-brand    # o config do agente veio de novo
 ```
 
-**8. Apontar o NPM para o Eros**
+Esta rodada só copia o que mudou desde a etapa 5, então é rápida. Os logins e os ajustes da etapa 6 continuam valendo,
+menos o do `anima-theia`, que se repete aqui.
 
-O Proxy Host de `eros.animahub.ai` já aponta para `anima-eros` (etapa 4). Nos Proxy Hosts antigos:
+**11. Ligar os bots**
 
-| Domínio | O que fazer |
+```sh
+make channels-on
+```
+
+Ele liga os bots e as tarefas agendadas de cada agente estacionado.
+
+**12. Apontar o NPM**
+
+| Proxy Host | O que fazer |
 |---|---|
-| `api.eros.impulsebpo.com` | Forward Hostname `hermes` → `anima-eros`, porta `8642` (os clientes da API continuam iguais) |
-| `eros.impulsebpo.com`, `app.eros.impulsebpo.com` | Troque por um **Redirection Host** para `eros.animahub.ai` e `eros.animahub.ai/app`, ou desative |
+| `api.eros.impulsebpo.com` | Forward Hostname `hermes` → `anima-eros`, porta `8642`. Os clientes da API não mudam nada |
+| `eros.impulsebpo.com`, `app.eros.impulsebpo.com` | Troque por **Redirection Hosts** para `eros.animahub.ai` e `eros.animahub.ai/app`, ou desative |
 
-**9. Conferir**
+**13. Conferir**
 
-- `https://eros.animahub.ai` abre e o login OAuth funciona.
-- `https://eros.animahub.ai/app` abre em português e entra com usuário e senha.
-- As sessões antigas, as memórias, o kanban e os cron jobs estão lá (`docker compose exec eros hermes sessions list`).
-- Os canais (Telegram, WhatsApp…) respondem.
-- O VNC funciona e o vault aparece em `/opt/data/impulse/vault`.
+- `docker compose exec eros hermes gateway status` lista os 13 agentes como atendidos e nenhum como `parked`.
+- O Webapp (`https://eros.animahub.ai/app`) abre em português e conversa com os agentes.
+- Mande uma mensagem para cada bot do Telegram (`impulse`, `impulse-copywriter`, `impulse-estrategista`,
+  `impulse-gerente` e `impulse-revisor`) e para o WhatsApp do `meta-ads-bot`. Todos respondem.
+- As tarefas agendadas têm o próximo horário: `docker compose exec eros hermes -p impulse cron list`.
 - `make logs` sem erros novos.
 
 ### Voltar atrás
 
-Os dados da instalação antiga não foram tocados, então a volta é imediata:
+Os dados da instalação antiga não foram tocados, então a volta é imediata. Pare o Eros **antes** de religar a antiga,
+para os bots não ficarem ligados nas duas:
 
 ```sh
 cd /srv/stacks/anima-eros/deploy/docker && make down
@@ -226,7 +317,7 @@ No NPM, volte os Proxy Hosts de `eros.impulsebpo.com`, `app.eros.impulsebpo.com`
 ### Depois da migração
 
 - **Backup:** com o Eros estável, comece a rotina com `make backup`.
-- **A stack antiga:** fica parada como plano de volta. Remova `/srv/stacks/anima-hermes` e
+- **A instalação antiga:** fica parada como plano de volta. Remova `/srv/stacks/anima-hermes` e
   `/srv/appdata/anima-hermes` só quando decidir que não precisa mais deles.
 
 ---

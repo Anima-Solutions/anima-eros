@@ -34,6 +34,8 @@ services:
       HERMES_DASHBOARD_HOST: 0.0.0.0
       HERMES_DASHBOARD_PORT: "9119"
       HERMES_DASHBOARD_PUBLIC_URL: ${DASHBOARD_URL:?defina DASHBOARD_URL no .env}
+      # Login pela conta Nous (OAuth), além do usuário e senha. Vazio = só usuário e senha
+      HERMES_DASHBOARD_OAUTH_CLIENT_ID: ${DASHBOARD_OAUTH_CLIENT_ID:-}
       # Login por usuário e senha (o bind fora do loopback exige um provedor de login)
       HERMES_DASHBOARD_BASIC_AUTH_USERNAME: ${DASHBOARD_USERNAME:?defina DASHBOARD_USERNAME no .env}
       HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: ${DASHBOARD_PASSWORD:?defina DASHBOARD_PASSWORD no .env}

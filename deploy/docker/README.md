@@ -21,7 +21,7 @@ A stack segue o padrão das outras da Ânima nos VPS (`anima-design-system`, `an
 | `Makefile` | Todos os comandos (`make help`) |
 | `.env.example` | Modelo do `.env` (`make init`) |
 | `plugins/anima-pt-br/` | Pacote de idioma pt-BR, montado só para leitura |
-| `scripts/` | `backup.sh`, `restore.sh` e `smoke.sh`, chamados pelo `make` |
+| `scripts/` | `backup.sh`, `restore.sh`, `migrate.sh` e `archive.sh`, chamados pelo `make`, e as listas da migração |
 
 ## Imagem
 
@@ -74,6 +74,7 @@ nos cabeçalhos `X-Forwarded-*` do NPM.
 | `NODE_AUTH_TOKEN` | Token do GitHub com `read:packages`, para o design system privado. No servidor fica no `.env`; na sua máquina, prefira o perfil do shell |
 | `DASHBOARD_URL`, `WEBAPP_URL` | Endereços públicos, com https |
 | `DASHBOARD_USERNAME`, `DASHBOARD_PASSWORD`, `DASHBOARD_SESSION_SECRET` | Login do dashboard e do Webapp |
+| `DASHBOARD_OAUTH_CLIENT_ID` | Opcional: login pela conta Nous no dashboard (o `agent:…` do Nous Portal) |
 | `API_SERVER_KEY` | Liga a API compatível com OpenAI; vazio a deixa desligada |
 | `PROXY_NETWORK` | Rede externa do NPM |
 | `MEM_LIMIT`, `CPU_LIMIT` | Limites do container |
@@ -97,8 +98,9 @@ Gere segredos com `make secret` e senhas com `openssl rand -hex 16`.
 | `make logs` / `make ps` / `make shell` | Logs, status e shell no container |
 | `make deploy` | `git pull`, build, up e limpeza das imagens órfãs |
 | `make backup` / `make backups` / `make restore FILE=...` | Backup com o container parado, lista de backups e restauração |
-| `make smoke SMOKE_FROM=...` | Testa a imagem sobre uma **cópia** de dados, sem rede |
-| `make adopt FROM=...` | Copia os dados de outra instalação para esta; a origem fica intacta |
+| `make migrate FROM=... [DRY=1]` | Traz agentes, histórico e pastas de trabalho de outra instalação; a origem só é lida |
+| `make migrate-archive FROM=... ARCHIVE="..."` | Guarda em `BACKUP_DIR` pastas da instalação antiga que não migram |
+| `make channels-on` / `make channels-off` | Liga os bots e as tarefas agendadas dos agentes, ou estaciona todos |
 | `make dev` / `make dev-configure` / `make dev-down` | Ambiente local |
 
 Comandos da Hermes dentro do container: `docker compose exec eros hermes <comando>`. O container troca para o
@@ -112,15 +114,29 @@ usuário `hermes` sozinho, então nenhum arquivo de dados fica com dono root.
 - O `make restore` não apaga nada. Ele extrai o backup numa pasta ao lado e só então troca as pastas de lugar. Os
   dados que estavam lá ficam em `hermes.antes-restore-<data>`, para você conferir e apagar à mão.
 
-## Teste sobre uma cópia dos dados (`make smoke`)
+## Migração de outra instalação (`make migrate`)
 
-- **A cópia:** o teste copia `SMOKE_FROM` para `/srv/appdata/<APP_NAME>-smoke`, sem caches e sem as pastas listadas
-  em `SMOKE_EXCLUDE`.
-- **O container:** sobe a imagem com `--network none`. A cópia leva os tokens dos canais e os cron jobs, e sem rede ela
-  não disputa mensagens com a instalação original nem dispara entregas.
-- **O que confere:** a versão, as sessões (o banco migrado), os cron jobs, o kanban, o pacote pt-BR, o VNC/XFCE, o
-  dashboard e o Webapp. No fim mostra os últimos erros registrados, para você revisar.
-- **Depois:** apaga a cópia. Para mantê-la, use `KEEP=1`.
+O passo a passo está no [guia de migração](../../README.md#guia-de-migração). Como o comando funciona:
+
+- **O destino é uma instalação nova e parada.** O `make migrate` exige o container parado e um `config.yaml` já
+  feito pelo `make configure` e pelo `hermes setup`. O `config.yaml` da raiz nunca é copiado.
+- **A raiz:** vêm a persona, as memórias, as skills, as tarefas agendadas, os bancos (histórico, projetos, respostas
+  da API) e os plugins, menos o `anima-brand`.
+- **Cada agente:** vem a pasta inteira, menos o que
+  [`scripts/migrate-profile.rules`](scripts/migrate-profile.rules) exclui: credenciais e logins, o `home` do agente,
+  o estado do processo e os caches. A lista segue a do `hermes profile export`. `MIGRATE_SKIP_PROFILES` diz quais
+  agentes ficam de fora (padrão: `default graphify-out`).
+- **O `.env`:** de cada `.env` antigo vêm só as variáveis de
+  [`scripts/migrate-env-keys.txt`](scripts/migrate-env-keys.txt). Elas são gravadas no `.env` novo, e o resto dele
+  fica como está. O relatório lista pelo nome, nunca pelo valor, as que vieram e as que ficaram para trás.
+- **As pastas de trabalho:** `MIGRATE_WORKDIRS` (padrão: `impulse anima-theia receita-federal clickup-doc
+  attachments`), nos mesmos caminhos. O `impulse/vault` não é copiado: ele é montado pelo
+  `docker-compose.override.yml`.
+- **Os agentes chegam estacionados.** Cada um recebe o marcador `gateway.parked`, o mesmo do
+  `hermes -p <agente> gateway stop`: a Hermes não liga os bots nem as tarefas agendadas dele. O dashboard conversa com
+  eles normalmente; o Webapp, só depois do `make channels-on`, que tira os marcadores.
+- **Pode repetir.** Cada rodada copia só o que mudou e espelha a origem: o que sumiu lá some aqui. O `.env` e os logins
+  refeitos na instalação nova não são apagados. Com `DRY=1`, nada é gravado.
 
 ## Desenvolvimento local
 

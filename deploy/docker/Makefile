@@ -41,7 +41,7 @@ SCRIPT_ENV = env APP_NAME="$(APP_NAME)" APPDATA_DIR="$(APPDATA_DIR)/hermes" BACK
 .PHONY: help init env dirs info npm-check secret network \
         build build-base up down restart logs ps shell configure npm-config update deploy \
         dev dev-down dev-logs dev-configure \
-        backup backups restore smoke adopt prune
+        backup backups restore migrate migrate-archive channels-on channels-off prune
 
 ## —— Ajuda ———————————————————————————————————————————————————————————————
 help: ## Lista os comandos disponíveis
@@ -195,20 +195,26 @@ restore: ## Restaura um backup: make restore FILE=/srv/backups/.../arquivo.tar
 	@$(SUDO) $(SCRIPT_ENV) ./scripts/restore.sh "$(FILE)"
 	-$(COMPOSE) start $(SERVICE)
 
-smoke: ## Testa a imagem sobre uma CÓPIA de dados, sem rede: make smoke SMOKE_FROM=/srv/appdata/.../hermes
-	@test -n "$(SMOKE_FROM)" || { echo "✘ Informe SMOKE_FROM=<pasta de dados> (e SMOKE_EXCLUDE='pastas grandes')"; exit 1; }
-	@$(SUDO) $(SCRIPT_ENV) SMOKE_EXCLUDE="$(SMOKE_EXCLUDE)" KEEP="$(KEEP)" ./scripts/smoke.sh "$(SMOKE_FROM)"
+## —— Migração —————————————————————————————————————————————————————————————
+migrate: ## Traz agentes, histórico e pastas de trabalho de outra instalação: make migrate FROM=/srv/appdata/.../hermes [DRY=1]
+	@test -n "$(FROM)" || { echo "✘ Informe FROM=<pasta de dados antiga>"; exit 1; }
+	@$(SUDO) $(SCRIPT_ENV) CONTAINER="$(APP_NAME)" DRY="$(DRY)" \
+		MIGRATE_SKIP_PROFILES="$(MIGRATE_SKIP_PROFILES)" MIGRATE_WORKDIRS="$(MIGRATE_WORKDIRS)" \
+		./scripts/migrate.sh "$(FROM)"
 
-adopt: ## Copia dados de outra instalação para esta (origem intacta): make adopt FROM=/srv/appdata/.../hermes
-	@test -n "$(FROM)" || { echo "✘ Informe FROM=<pasta de dados de origem>"; exit 1; }
-	@! docker ps --format '{{.Names}}' | grep -qx "$(APP_NAME)" || { echo "✘ Pare o $(APP_NAME) antes (make down)"; exit 1; }
-	@if [ -n "$$(ls -A "$(APPDATA_DIR)/hermes" 2>/dev/null)" ]; then \
-		read -p "$(APPDATA_DIR)/hermes não está vazia e será sobrescrita. Continuar? [y/N] " ok && [ "$$ok" = y ]; fi
-	@$(SUDO) mkdir -p "$(APPDATA_DIR)/hermes"
-	$(SUDO) rsync -aHAX --delete --info=progress2 \
-		--exclude /gateway.pid --exclude /gateway.lock --exclude /gateway.sock --exclude /auth.lock \
-		"$(FROM)/" "$(APPDATA_DIR)/hermes/"
-	@echo "✔ Dados copiados de $(FROM). A origem não foi alterada."
+migrate-archive: ## Guarda em BACKUP_DIR as pastas antigas que não migram: make migrate-archive FROM=... ARCHIVE="a b"
+	@test -n "$(FROM)" || { echo "✘ Informe FROM=<pasta de dados antiga>"; exit 1; }
+	@$(SUDO) $(SCRIPT_ENV) ./scripts/archive.sh "$(FROM)" $(ARCHIVE)
+
+channels-on: ## Liga os bots e as tarefas agendadas dos agentes estacionados (gateway.parked)
+	@$(EXEC) sh -c 'n=0; for d in /opt/data/profiles/*/; do \
+		[ -e "$$d/gateway.parked" ] || continue; p=$$(basename "$$d"); \
+		hermes -p "$$p" gateway start >/dev/null && echo "  ✔ $$p" || { echo "  ✘ $$p"; n=1; }; done; exit $$n'
+	@echo "✔ Agentes no ar. Confira com: docker compose exec $(SERVICE) hermes gateway status"
+
+channels-off: ## Estaciona todos os agentes: sem bots e sem tarefas agendadas (o dashboard segue no ar)
+	@$(EXEC) sh -c 'for d in /opt/data/profiles/*/; do p=$$(basename "$$d"); \
+		hermes -p "$$p" gateway stop >/dev/null && echo "  ✔ $$p estacionado"; done'
 
 ## —— Limpeza —————————————————————————————————————————————————————————————
 prune: ## Remove imagens Docker órfãs (dangling)

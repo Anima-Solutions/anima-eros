@@ -1,0 +1,31 @@
+# Variáveis que o migrate.sh traz dos .env antigos (o da raiz e o de cada agente).
+# Uma por linha. Qualquer outra fica para trás, e o relatório lista o nome dela.
+
+# --- Credenciais --------------------------------------------------------------------
+NVIDIA_API_KEY
+GOOGLE_API_KEY
+GEMINI_API_KEY
+TELEGRAM_BOT_TOKEN
+WHATSAPP_CLOUD_ACCESS_TOKEN
+GOOGLE_ADS_DEVELOPER_TOKEN
+GOOGLE_ADS_CLIENT_ID
+GOOGLE_ADS_CLIENT_SECRET
+GOOGLE_ADS_REFRESH_TOKEN
+GOOGLE_ADS_LOGIN_CUSTOMER_ID
+GOOGLE_ADS_PROJECT_ID
+
+# --- Canais: quem fala com o bot e onde ---------------------------------------------
+TELEGRAM_ALLOWED_USERS
+TELEGRAM_GROUP_ALLOWED_CHATS
+TELEGRAM_HOME_CHANNEL
+TELEGRAM_HOME_CHANNEL_NAME
+TELEGRAM_REQUIRE_MENTION
+TELEGRAM_REACTIONS
+WHATSAPP_ALLOWED_USERS
+
+# --- Caminhos usados pelos scripts dos agentes Impulse (todos em /opt/data/impulse) ---
+VAULT
+IMPULSE_SECRETS
+GEMINI_INBOX
+PAINEL_JSON
+PUBLICO_FIN
