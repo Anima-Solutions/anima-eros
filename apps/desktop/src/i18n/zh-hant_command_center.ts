@@ -335,7 +335,8 @@ export const zhHantCommandCenter = {
         help: '建議設定。電話號碼或 WhatsApp ID（每格一個）。'
       }
     },
-    platformIntro: {}
+    platformIntro: {},
+    platformDescription: {}
   },
 
   profiles: {
@@ -597,6 +598,8 @@ export const zhHantCommandCenter = {
       blueprints: '藍圖'
     },
     blueprints: {
+      copy: {},
+      options: {},
       tab: '藍圖',
       startFrom: '從此開始',
       custom: '自訂',

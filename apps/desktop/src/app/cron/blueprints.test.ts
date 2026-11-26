@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { AutomationBlueprint } from '@/hermes'
 
-import { initialBlueprintValues } from './blueprints'
+import { initialBlueprintValues, localizeBlueprint } from './blueprints'
 
 function blueprint(fields: AutomationBlueprint['fields']): AutomationBlueprint {
   return {
@@ -101,5 +101,30 @@ describe('initialBlueprintValues', () => {
     )
 
     expect(values).toEqual({ deliver: 'telegram' })
+  })
+})
+
+describe('localizeBlueprint', () => {
+  const source = blueprint([
+    { name: 'time', type: 'time', label: 'What time?', default: '08:00', options: [], optional: false, help: '24h' },
+    { name: 'day', type: 'enum', label: 'Which day?', default: 'sunday', options: ['sunday'], optional: false, help: '' }
+  ])
+
+  it('replaces the shown text and keeps the key, slot names, defaults and option values', () => {
+    const localized = localizeBlueprint(source, {
+      test: { title: 'Teste', fields: { time: { label: 'Que horas?' }, missing: { label: 'x' } } }
+    })
+
+    expect(localized.key).toBe('test')
+    expect(localized.title).toBe('Teste')
+    expect(localized.description).toBe(source.description)
+    expect(localized.fields.map(field => [field.name, field.label, field.help, field.default, field.options])).toEqual([
+      ['time', 'Que horas?', '24h', '08:00', []],
+      ['day', 'Which day?', '', 'sunday', ['sunday']]
+    ])
+  })
+
+  it('returns the backend blueprint untouched when the catalog has no copy for it', () => {
+    expect(localizeBlueprint(source, { other: { title: 'Outro' } })).toBe(source)
   })
 })

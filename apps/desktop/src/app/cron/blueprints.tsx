@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { AutomationBlueprint, AutomationBlueprintField } from '@/hermes'
+import { type Translations, useI18n } from '@/i18n'
 
 // The blueprint catalog is shared with the dashboard, so its deliver slot
 // defaults to "origin" (the chat/home-channel a dashboard or gateway job was
@@ -13,6 +14,31 @@ const DESKTOP_DELIVER_DEFAULT = 'local'
 
 function isDeliverField(field: AutomationBlueprintField): boolean {
   return field.name === DELIVER_FIELD
+}
+
+// The catalog is served in English (it is shared with the dashboard and the
+// `/blueprint` command); the active language's copy replaces the text shown,
+// never the key, slot names or option values sent back.
+export function localizeBlueprint(
+  blueprint: AutomationBlueprint,
+  copy: Translations['cron']['blueprints']['copy']
+): AutomationBlueprint {
+  const own = copy[blueprint.key]
+
+  if (!own) {
+    return blueprint
+  }
+
+  return {
+    ...blueprint,
+    title: own.title || blueprint.title,
+    description: own.description || blueprint.description,
+    fields: blueprint.fields.map(field => {
+      const fieldCopy = own.fields?.[field.name]
+
+      return fieldCopy ? { ...field, label: fieldCopy.label || field.label, help: fieldCopy.help || field.help } : field
+    })
+  }
 }
 
 // Initial form state for a blueprint = each field's default (or ''). Pure so the
@@ -58,6 +84,8 @@ export function BlueprintSlotControl({
   onChange: (next: string) => void
   value: string
 }) {
+  const { t } = useI18n()
+
   if (field.type === 'enum' || field.type === 'weekdays') {
     return (
       <Select onValueChange={onChange} value={value}>
@@ -67,7 +95,7 @@ export function BlueprintSlotControl({
         <SelectContent>
           {field.options.map(option => (
             <SelectItem key={option} value={option}>
-              {option}
+              {t.cron.blueprints.options[option] || option}
             </SelectItem>
           ))}
         </SelectContent>

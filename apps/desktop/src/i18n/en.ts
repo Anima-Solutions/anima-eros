@@ -44,7 +44,20 @@ export const en: Translations = {
   appTour: enAppTour,
   firstRun: enFirstRun,
   // English editorial copy stays in the shipped JSONL; other locales override it.
-  intro: { stock: {}, custom: () => [] },
+  // English renders `intro-copy.jsonl`; the neutral bodies are repeated here, in its order, so a
+  // language pack can replace them by index (`intro.stock.none.0`).
+  intro: {
+    stock: {
+      none: [
+        "Ask a question, paste an error, or point me at a repo. I can read code, run tools, and help you ship.",
+        "Describe the task in your own words. I'll pick the right tools, explain my plan, and check in before risky steps.",
+        "Drop a file path, a traceback, or a rough idea. I'll investigate, suggest next steps, and keep things reversible.",
+        "Search the repo, edit files, run tests, open PRs. Tell me the goal and I'll handle the mechanical parts.",
+        "Type a task, question, or snippet. I remember the session, cite my sources, and stop to ask when I'm unsure."
+      ]
+    },
+    custom: () => []
+  },
   connectors: enConnectorCard,
 
   catalog: enCatalog,
@@ -2751,7 +2764,8 @@ export const en: Translations = {
         help: 'Recommended. Phone numbers or WhatsApp IDs, one per box.'
       }
     },
-    platformIntro: {}
+    platformIntro: {},
+    platformDescription: {}
   },
 
   webhooks: {
@@ -3122,6 +3136,8 @@ export const en: Translations = {
       blueprints: 'Blueprints'
     },
     blueprints: {
+      copy: {},
+      options: {},
       tab: 'Blueprints',
       startFrom: 'Start from',
       custom: 'Custom',

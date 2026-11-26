@@ -3188,7 +3188,8 @@ export const deOverrides = {
         help: 'Empfohlen. Telefonnummern oder WhatsApp-IDs, eine pro Feld.'
       }
     },
-    platformIntro: {}
+    platformIntro: {},
+    platformDescription: {}
   },
   webhooks: {
     search: 'Webhooks suchen …',
@@ -3560,6 +3561,8 @@ export const deOverrides = {
       blueprints: 'Blueprints'
     },
     blueprints: {
+      copy: {},
+      options: {},
       tab: 'Blueprints',
       startFrom: 'Starten von',
       custom: 'Benutzerdefiniert',

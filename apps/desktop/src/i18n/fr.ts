@@ -3196,7 +3196,8 @@ export const frOverrides = {
         help: 'Recommandé. Numéros de téléphone ou IDs WhatsApp (un par case).'
       }
     },
-    platformIntro: {}
+    platformIntro: {},
+    platformDescription: {}
   },
   webhooks: {
     search: 'Rechercher des webhooks...',
@@ -3567,6 +3568,8 @@ export const frOverrides = {
       blueprints: 'Plans'
     },
     blueprints: {
+      copy: {},
+      options: {},
       tab: 'Plans',
       startFrom: 'Commencer à partir de',
       custom: 'Personnalisé',

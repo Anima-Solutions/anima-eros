@@ -2644,6 +2644,7 @@ export const zhOverrides = {
       WHATSAPP_MODE: { label: '桥接模式' },
       WHATSAPP_ALLOWED_USERS: { label: '允许的 WhatsApp 用户', help: '推荐。电话号码或 WhatsApp ID（每格一个）。' }
     },
+    platformDescription: {},
     platformIntro: {
       telegram:
         '在 Telegram 中，与 @BotFather 对话，运行 /newbot，复制它给你的令牌。然后从 @userinfobot 获取你的数字用户 ID。',
@@ -3023,6 +3024,8 @@ export const zhOverrides = {
       blueprints: '蓝图'
     },
     blueprints: {
+      copy: {},
+      options: {},
       tab: '蓝图',
       startFrom: '从此开始',
       custom: '自定义',

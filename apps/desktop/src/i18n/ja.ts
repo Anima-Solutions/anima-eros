@@ -1823,7 +1823,8 @@ export const jaOverrides = {
         help: '推奨。電話番号または WhatsApp ID（1 欄に 1 件）。'
       }
     },
-    platformIntro: {}
+    platformIntro: {},
+    platformDescription: {}
   },
 
   profiles: {
@@ -2103,6 +2104,8 @@ export const jaOverrides = {
       blueprints: 'ブレーンプリント'
     },
     blueprints: {
+      copy: {},
+      options: {},
       tab: 'ブレーンプリント',
       startFrom: '開始点',
       custom: 'カスタム',

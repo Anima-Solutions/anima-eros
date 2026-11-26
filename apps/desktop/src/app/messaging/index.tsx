@@ -769,7 +769,7 @@ function PlatformDetail({
             )}
           </div>
           <p className="mt-1 text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
-            {platform.description}
+            {platformDescription(platform, m)}
           </p>
           <PlatformHint platform={platform} />
         </div>
@@ -1093,8 +1093,12 @@ const PLATFORM_INTRO: Record<string, string> = {
     'Run an HTTP server that other tools (GitHub, GitLab, custom apps) can POST to. Use the secret to verify signatures.'
 }
 
+// The backend serves each card's description in English; the catalog may carry it in the active language.
+const platformDescription = (platform: MessagingPlatformInfo, m: Translations['messaging']) =>
+  m.platformDescription[platform.id] || platform.description
+
 const introCopy = (platform: MessagingPlatformInfo, m: Translations['messaging']) =>
-  m.platformIntro[platform.id] || PLATFORM_INTRO[platform.id] || platform.description
+  m.platformIntro[platform.id] || PLATFORM_INTRO[platform.id] || platformDescription(platform, m)
 
 function MessagingField({
   edits,

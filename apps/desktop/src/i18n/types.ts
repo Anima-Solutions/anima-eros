@@ -2420,6 +2420,8 @@ export interface Translations extends NoticeTranslations {
     }
     fieldCopy: Record<string, { label?: string; help?: string; placeholder?: string }>
     platformIntro: Record<string, string>
+    /** Card blurb per platform id over the backend's English description; a missing id keeps it. */
+    platformDescription: Record<string, string>
   }
 
   webhooks: {
@@ -2730,6 +2732,11 @@ export interface Translations extends NoticeTranslations {
       blueprints: string
     }
     blueprints: {
+      /** Per-blueprint copy over the backend catalog's English, keyed by blueprint key; a missing
+       *  entry or field keeps the backend's text. */
+      copy: Record<string, BlueprintCopy>
+      /** Display labels for blueprint option values; the value itself is still what is sent. */
+      options: Record<string, string>
       tab: string
       startFrom: string
       custom: string
@@ -4348,4 +4355,10 @@ export interface Translations extends NoticeTranslations {
       toggle: (open: boolean) => string
     }
   }
+}
+
+export interface BlueprintCopy {
+  title?: string
+  description?: string
+  fields?: Record<string, { label?: string; help?: string }>
 }

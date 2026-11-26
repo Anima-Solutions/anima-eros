@@ -73,7 +73,13 @@ import {
 } from '../overlays/panel'
 import type { SetStatusbarItemGroup } from '../shell/statusbar-controls'
 
-import { BlueprintSlotControl, blueprintSlotHelp, cleanBlueprintFieldError, initialBlueprintValues } from './blueprints'
+import {
+  BlueprintSlotControl,
+  blueprintSlotHelp,
+  cleanBlueprintFieldError,
+  initialBlueprintValues,
+  localizeBlueprint
+} from './blueprints'
 import { CatchUpField } from './catch-up-field'
 import { mutateAndRefreshCronJobs, refreshCronJobs, triggerAndRefreshCronJobs } from './cron-actions'
 import {
@@ -429,7 +435,8 @@ export function CronView({ onClose, onOpenSession, setStatusbarItemGroup: _setSt
 
   const blueprintsQuery = useQuery({
     queryKey: ['cron-blueprints', blueprintProfile],
-    queryFn: async () => (await getAutomationBlueprints(blueprintProfile)).blueprints
+    queryFn: async () => (await getAutomationBlueprints(blueprintProfile)).blueprints,
+    select: list => list.map(blueprint => localizeBlueprint(blueprint, c.blueprints.copy))
   })
 
   const visibleBlueprints = useMemo(() => {
@@ -1297,6 +1304,7 @@ function CronEditorDialog({
   const blueprintsQuery = useQuery({
     queryKey: ['cron-blueprints', blueprintProfile],
     queryFn: async () => (await getAutomationBlueprints(blueprintProfile)).blueprints,
+    select: list => list.map(blueprint => localizeBlueprint(blueprint, c.blueprints.copy)),
     enabled: open && !isEdit
   })
 

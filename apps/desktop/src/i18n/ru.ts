@@ -2047,7 +2047,8 @@ export const ruOverrides = {
         help: 'Рекомендуется. Номера телефонов или ID WhatsApp (по одному в поле).'
       }
     },
-    platformIntro: {}
+    platformIntro: {},
+    platformDescription: {}
   },
   webhooks: {
     search: 'Поиск вебхуков...',
@@ -2362,6 +2363,8 @@ export const ruOverrides = {
       blueprints: 'Шаблоны'
     },
     blueprints: {
+      copy: {},
+      options: {},
       tab: 'Шаблоны',
       startFrom: 'Начать с',
       custom: 'Свой',
