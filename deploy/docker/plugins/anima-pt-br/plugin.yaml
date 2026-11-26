@@ -1,0 +1,8 @@
+name: anima-pt-br
+version: 0.1.0
+description: Português do Brasil para o Ânima Eros (Webapp). As mensagens do agente e do terminal usam o pt embutido no Hermes.
+author: Ânima
+manifest_version: 1
+provides_locales:
+  - id: pt
+    endonym: Português (Brasil)

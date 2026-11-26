@@ -27,6 +27,8 @@ services:
     command: ["gateway", "run"]
     volumes:
       - ${HERMES_DATA_DIR:-./data}:/opt/data
+      # Pacote de idioma pt-BR do Eros (versionado no repo, só leitura no container).
+      - ./plugins/anima-pt-br:/opt/data/plugins/anima-pt-br:ro
     environment:
       HERMES_UID: ${HERMES_UID:-1000}
       HERMES_GID: ${HERMES_GID:-1000}
