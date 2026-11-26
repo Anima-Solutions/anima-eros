@@ -34,6 +34,7 @@ import { RootErrorBoundary } from './components/error-boundary'
 import { HapticsProvider } from './components/haptics-provider'
 import { RootTooltipProvider } from './components/ui/tooltip'
 import { ProfileI18nProvider as I18nProvider } from './i18n/profile-provider'
+import { PRODUCT_NAME } from './lib/brand'
 import { installClipboardShim } from './lib/clipboard'
 import { queryClient } from './lib/query-client'
 import { installRendererAnimationPauseState } from './lib/renderer-loop-pause'
@@ -64,7 +65,7 @@ if (import.meta.env.MODE !== 'production' || import.meta.env.VITE_PERF_PROBE ===
 const winParam = new URLSearchParams(window.location.search).get('win')
 
 if (winParam === 'hud') {
-  document.title = 'Hermes HUD'
+  document.title = `${PRODUCT_NAME} HUD`
 }
 
 // Each transparent root used to force its host layers see-through when it

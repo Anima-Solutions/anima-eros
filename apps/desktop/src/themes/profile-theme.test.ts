@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { modePref, skinPref } from './context'
-import { DEFAULT_SKIN_NAME } from './presets'
+import { DEFAULT_MODE, DEFAULT_SKIN_NAME } from './presets'
 
 // Skin and mode share one per-profile contract, so assert it once over both.
 interface Pref {
@@ -18,7 +18,7 @@ const cases = [
     b: 'catppuccin',
     junk: 'nope'
   },
-  { name: 'mode', pref: modePref as unknown as Pref, fallback: 'system', a: 'dark', b: 'light', junk: 'dusk' }
+  { name: 'mode', pref: modePref as unknown as Pref, fallback: DEFAULT_MODE, a: 'light', b: 'system', junk: 'dusk' }
 ]
 
 describe.each(cases)('per-profile $name', ({ pref, fallback, a, b, junk }) => {

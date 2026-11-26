@@ -20,6 +20,7 @@
 
 import { THEME_PRESET_PALETTES } from '@hermes/shared'
 
+import { ANIMA_PALETTE } from './anima'
 import { skinToDesktopTheme } from './skin'
 import type { DesktopTheme, DesktopThemeTypography } from './types'
 
@@ -111,6 +112,23 @@ export const githubTheme: DesktopTheme = {
     brightMagenta: '#d2a8ff',
     brightCyan: '#56d4dd',
     brightWhite: '#ffffff'
+  }
+}
+
+/**
+ * Ânima — the default identity of this fork, built from the Ânima design system
+ * (`@anima-solutions/design-system`). Colors come from the package's token
+ * files (see ./anima.ts); Inter Variable is bundled from the same package
+ * (styles.css), so nothing loads from a font CDN.
+ */
+export const animaTheme: DesktopTheme = {
+  name: 'anima',
+  label: 'Ânima',
+  description: 'Ânima design system: lime on near-black, Inter',
+  ...ANIMA_PALETTE,
+  typography: {
+    fontSans: `"Inter Variable", "Inter", ${SYSTEM_SANS}`,
+    fontMono: SYSTEM_MONO
   }
 }
 
@@ -442,6 +460,7 @@ export const slateTheme: DesktopTheme = {
 }
 
 export const BUILTIN_THEMES: Record<string, DesktopTheme> = {
+  anima: animaTheme,
   nous: nousTheme,
   github: githubTheme,
   catppuccin: catppuccinTheme,
@@ -459,7 +478,11 @@ export const BUILTIN_THEMES: Record<string, DesktopTheme> = {
 export const BUILTIN_THEME_LIST = Object.values(BUILTIN_THEMES)
 
 /** Skin used when nothing is persisted or the persisted name is retired. */
-export const DEFAULT_SKIN_NAME = 'nous'
+export const DEFAULT_SKIN_NAME = 'anima'
+
+/** Mode used when nothing is persisted. The Ânima design system is dark-first:
+ *  its dark theme is the primary one and light is derived from it. */
+export const DEFAULT_MODE = 'dark' as const
 
 /** Names that no longer resolve to a skin of their own. A stored pick of one
  *  falls back to DEFAULT_SKIN_NAME, and a cached backend theme under one is

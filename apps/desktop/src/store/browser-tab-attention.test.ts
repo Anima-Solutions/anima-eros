@@ -4,6 +4,8 @@
 import { cleanup } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { PRODUCT_NAME } from '@/lib/brand'
+
 import { $tabFlashText, flagTabAttention } from './browser-tab-attention'
 import { installBrowserTabTitle } from './browser-tab-title'
 
@@ -38,7 +40,7 @@ function comeBack(how: 'focus' | 'visibilitychange') {
 
 function expectFullyReset() {
   expect($tabFlashText.get()).toBeNull()
-  expect(document.title).toBe('Hermes')
+  expect(document.title).toBe(PRODUCT_NAME)
   expect(link.href).toBe(ICON)
   expect(vi.getTimerCount()).toBe(0)
 }
@@ -90,7 +92,7 @@ describe('flagTabAttention', () => {
       expect(link.href).toBe(BADGED)
 
       vi.advanceTimersByTime(1000)
-      expect(document.title).toBe('Hermes')
+      expect(document.title).toBe(PRODUCT_NAME)
 
       flagTabAttention('Question for you')
       expect(document.title).toBe('Question for you')
@@ -105,7 +107,7 @@ describe('flagTabAttention', () => {
       // Listeners are gone too: a later away/back cycle without a new event changes nothing.
       away = true
       vi.advanceTimersByTime(5000)
-      expect(document.title).toBe('Hermes')
+      expect(document.title).toBe(PRODUCT_NAME)
     }
   )
 
@@ -121,7 +123,7 @@ describe('flagTabAttention', () => {
     away = false
     flagTabAttention('Approval needed')
 
-    expect(document.title).toBe('Hermes')
+    expect(document.title).toBe(PRODUCT_NAME)
     expect(images).toHaveLength(0)
     expect(vi.getTimerCount()).toBe(0)
   })

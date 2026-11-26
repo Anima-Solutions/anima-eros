@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import { PRODUCT_NAME } from '@/lib/brand'
 import { createClientSessionState } from '@/lib/chat-runtime'
 import type { SessionInfo } from '@/types/hermes'
 
@@ -33,7 +34,7 @@ function reset() {
   $unreadFinishedMarkers.set({})
   $unreadFinishedSessionIds.set([])
   delete document.documentElement.dataset.hermesDesktopHost
-  document.title = 'Hermes'
+  document.title = PRODUCT_NAME
 }
 
 describe('browserTabTitle', () => {
@@ -101,7 +102,7 @@ describe('installBrowserTabTitle', () => {
     $selectedStoredSessionId.set('s1')
     uninstall = installBrowserTabTitle()
 
-    expect(document.title).toBe('Hermes')
+    expect(document.title).toBe(PRODUCT_NAME)
   })
 
   it('leaves the native window title alone', () => {
@@ -110,6 +111,6 @@ describe('installBrowserTabTitle', () => {
     uninstall = installBrowserTabTitle()
     publishSessionState('r1', state('s1', { busy: true }))
 
-    expect(document.title).toBe('Hermes')
+    expect(document.title).toBe(PRODUCT_NAME)
   })
 })

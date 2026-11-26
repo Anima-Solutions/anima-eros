@@ -1,5 +1,6 @@
-import collapseBold from '@nous-research/ui/fonts/Collapse-Bold.woff2?url'
+import interVariable from '@anima-solutions/design-system/fonts/inter-latin-opsz-normal.woff2?url'
 
+import { PRODUCT_NAME } from './brand'
 import { isTransparentWindow } from './transparent-windows'
 
 type BootPalette = Record<'accent' | 'accentForeground' | 'background' | 'foreground', string>
@@ -29,7 +30,7 @@ async function loadWordmarkFont(): Promise<void> {
   }
 
   try {
-    const face = new FontFace('Collapse', `url("${collapseBold}")`, { weight: '700', display: 'swap' })
+    const face = new FontFace('Inter Variable', `url("${interVariable}")`, { weight: '100 900', display: 'swap' })
     document.fonts.add(face)
     await face.load()
   } catch {
@@ -76,22 +77,21 @@ export function showBootFailure(error: unknown, reload: () => void = () => locat
   })
 
   const wordmark = document.createElement('p')
-  wordmark.textContent = 'HERMES AGENT'
+  wordmark.textContent = PRODUCT_NAME
   wordmark.setAttribute('aria-hidden', 'true')
   Object.assign(wordmark.style, {
     color: palette?.accent ?? 'currentColor',
-    fontFamily: 'Collapse, system-ui, sans-serif',
+    fontFamily: '"Inter Variable", system-ui, sans-serif',
     fontSize: 'clamp(2.5rem, 9vw, 6rem)',
-    fontWeight: '700',
-    letterSpacing: '0.08em',
-    lineHeight: '0.9',
-    margin: '0 0 24px',
-    textTransform: 'uppercase'
+    fontWeight: '600',
+    letterSpacing: '-0.03em',
+    lineHeight: '0.95',
+    margin: '0 0 24px'
   })
 
   // English is intentional: i18n lives in the app graph that failed to load.
   const heading = document.createElement('h1')
-  heading.textContent = 'Hermes couldn’t load'
+  heading.textContent = `${PRODUCT_NAME} couldn’t load`
   heading.style.cssText = 'color: inherit; font-size: 1.125rem; font-weight: 600; margin: 0'
 
   const message = document.createElement('p')

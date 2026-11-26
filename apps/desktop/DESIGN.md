@@ -225,8 +225,16 @@ context-dependent (e.g. "Show" / "Hide"). Never hardcode combos; always use
 `useKeybindHint` or `TipKeybindLabel`.
 
 Notes:
-- Text buttons are square (no radius) and sized by padding + line-height (no
-  fixed heights). Only icon buttons carry the shared 4px radius.
+- Text buttons are sized by padding + line-height (no fixed heights). Corners
+  come from the role radii in `styles.css` (`--ui-radius-control`,
+  `--ui-radius-icon`, `--ui-radius-badge`, `--ui-radius-chip`): near-square by
+  default, the Ânima design system's values under the Ânima theme. Don't
+  hard-wire a radius in a primitive; add or reuse a role variable.
+- The Ânima theme also takes the design system's density: Button xs/sm/default/lg
+  get 24/32/36/40px minimum heights, Input and SelectTrigger 36px, 14px text, and
+  navigation rows (`--ui-nav-row-height`) 32px. The rules key on the primitives'
+  `data-slot` / `data-size` / `data-variant`, so keep those attributes on any new
+  primitive; other themes keep the compact padding-driven sizes.
 - SVGs inherit `size-3.5` (`size-3` at `xs`). Don't re-set icon size.
 - Polymorph with `asChild` when the button must render as a link/Slot.
 
@@ -487,14 +495,18 @@ from their root base tokens; do not multiply the global tokens or nest CSS zoom.
 
 ## Iconography & brand
 
-- **Tabler** is the default component/chrome set. Import its curated aliases and
-  `iconSize` scale from `src/lib/icons.ts`; do not import icon packages directly
-  in feature code.
-- **`Codicon`** is the compact editor/tool/status vocabulary. Use
-  `src/components/ui/codicon.tsx`, including `codiconIcon()` where a
-  Tabler-shaped component is required.
+- **Phosphor** draws every icon. Import the curated aliases and `iconSize` scale
+  from `src/lib/icons.ts`; do not import icon packages directly in feature code.
+  Each alias carries the app defaults (24px, `ICON_WEIGHT`); `*Filled` aliases
+  use the `fill` weight.
+- **`Codicon`** is the compact editor/tool/status vocabulary, addressed by codicon
+  name (`<Codicon name="…">`, `codicon:` ids in the plugin SDK). Use
+  `src/components/ui/codicon.tsx`, including `codiconIcon()` where an
+  `IconComponent` is required. `components/ui/codicon-glyphs.ts` maps each name to
+  its Phosphor glyph; an unmapped name falls back to the codicon font, so add a
+  row there when you reach for a new name.
 - Pick the vocabulary by semantic context and reuse the existing icon for an
-  action. Do not introduce a third icon set or mix styles within one control
+  action. Do not introduce another icon set or mix styles within one control
   group.
 - **`BrandMark`** (`src/components/brand-mark.tsx`) is the brand glyph — the
   `nous-girl` mark on a fixed tile, theme-aware: black girl on white in light

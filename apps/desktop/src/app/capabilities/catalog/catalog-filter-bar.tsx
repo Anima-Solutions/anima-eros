@@ -1,10 +1,10 @@
-import { IconCategory, IconDatabase, IconFilter2, IconRosetteDiscountCheck } from '@tabler/icons-react'
 import { type ReactNode, useId, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { SegmentedControl } from '@/components/ui/segmented-control'
 import { useI18n } from '@/i18n'
+import { Category, Database, Filter, SealCheck } from '@/lib/icons'
 
 import { type CatalogKind, catalogLabel } from './catalog-data'
 import type { FacetRow } from './catalog-filters'
@@ -62,7 +62,7 @@ export function CatalogFilterBar(props: CatalogFilterBarProps) {
   return (
     <div className="catalog-filter-bar" data-catalog-filters>
       <div className="catalog-filter-row">
-        <SegmentedControl onChange={setMode} options={[{ id: 'categories', label: c.category, icon: IconCategory }, { id: 'sources', label: tiers ? c.tier : c.source, icon: tiers ? IconRosetteDiscountCheck : IconDatabase }]} sizing="content" value={mode} />
+        <SegmentedControl onChange={setMode} options={[{ id: 'categories', label: c.category, icon: Category }, { id: 'sources', label: tiers ? c.tier : c.source, icon: tiers ? SealCheck : Database }]} sizing="content" value={mode} />
         <div className="catalog-filter-chips">
           <Button aria-pressed={!selected.length} onClick={() => onSelect(null)} size="xs" variant={!selected.length ? 'default' : 'outline'}>{t.skills.all}</Button>
           <span aria-hidden className="px-1 text-(--ui-text-quaternary)">/</span>
@@ -84,7 +84,7 @@ export function CatalogFilterBar(props: CatalogFilterBarProps) {
           <Popover onOpenChange={setExpanded} open={expanded}>
             <PopoverTrigger asChild>
               <Button aria-labelledby={`${panelId}-label`} size="icon-xs" variant={expanded ? 'default' : 'secondary'}>
-                <IconFilter2 />
+                <Filter />
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" aria-label={c.filters} className="w-80 max-w-[calc(100vw-2rem)] p-4" side="bottom" variant="menu">

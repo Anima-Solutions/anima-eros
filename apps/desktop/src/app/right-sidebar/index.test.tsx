@@ -139,7 +139,8 @@ describe('RightSidebarPane', () => {
   // the codicon vocabulary. `collapse-all` draws two offset rounded squares —
   // at 13px its top edge reads as an asymmetric hamburger line. The header
   // action group must also stay on the shared Codicon primitive (DESIGN.md
-  // iconography: no third icon set / hand-rolled SVGs inside a control group).
+  // iconography: no other icon set / hand-rolled SVGs inside a control group).
+  // Codicon draws an <svg class="codicon">; any other <svg> is hand-rolled.
   it('renders the collapse-all affordance with the symmetric three-bars glyph', async () => {
     setCurrentCwd('/repo')
 
@@ -149,6 +150,6 @@ describe('RightSidebarPane', () => {
     const glyph = collapse.querySelector('.codicon')
     expect(glyph).not.toBeNull()
     expect(glyph?.classList.contains('codicon-three-bars')).toBe(true)
-    expect(collapse.querySelector('svg')).toBeNull()
+    expect(collapse.querySelector('svg:not(.codicon)')).toBeNull()
   })
 })

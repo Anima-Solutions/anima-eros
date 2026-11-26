@@ -1,6 +1,7 @@
-import type { Icon } from '@tabler/icons-react'
-import type * as React from 'react'
+import * as React from 'react'
 
+import { CODICON_GLYPHS } from '@/components/ui/codicon-glyphs'
+import { ICON_WEIGHT, type IconComponent } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
 export interface CodiconProps extends React.HTMLAttributes<HTMLElement> {
@@ -9,24 +10,38 @@ export interface CodiconProps extends React.HTMLAttributes<HTMLElement> {
   spinning?: boolean
 }
 
+/**
+ * A named icon. Mapped names draw a Phosphor glyph sized `1em`; it keeps the
+ * `codicon codicon-<name>` classes, so codicon.css (16px, spin) and every rule
+ * aimed at `.codicon` still size and animate it. Unmapped names fall back to the
+ * codicon font.
+ */
 export function Codicon({ className, name, size, spinning, style, ...props }: CodiconProps) {
-  return (
-    <i
-      aria-hidden="true"
-      className={cn('codicon', `codicon-${name}`, spinning && 'codicon-modifier-spin', className)}
-      style={{ ...(size != null && size !== '' ? { fontSize: size } : {}), ...style }}
-      {...props}
-    />
-  )
+  const classes = cn('codicon', `codicon-${name}`, spinning && 'codicon-modifier-spin', className)
+  const sized = { ...(size != null && size !== '' ? { fontSize: size } : {}), ...style }
+  const glyph = CODICON_GLYPHS[name]
+
+  if (glyph) {
+    return React.createElement(glyph.icon, {
+      ...(props as React.SVGProps<SVGSVGElement>),
+      'aria-hidden': true,
+      className: classes,
+      size: '1em',
+      style: sized,
+      weight: glyph.weight ?? ICON_WEIGHT
+    })
+  }
+
+  return <i aria-hidden="true" className={classes} style={sized} {...props} />
 }
 
-/** Wrap a codicon as a Tabler-shaped icon for nav rows that expect `IconComponent`. */
-export function codiconIcon(name: string): Icon {
+/** Wrap a codicon as an icon component for nav rows that expect `IconComponent`. */
+export function codiconIcon(name: string): IconComponent {
   function CodiconIcon({ className }: { className?: string }) {
     return <Codicon aria-hidden className={cn('leading-none', className)} name={name} size="1em" />
   }
 
   CodiconIcon.displayName = `Codicon(${name})`
 
-  return CodiconIcon as Icon
+  return CodiconIcon
 }

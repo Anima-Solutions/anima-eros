@@ -3,6 +3,7 @@
 @import 'tw-shimmer';
 @import 'katex/dist/katex.min.css';
 @import '@vscode/codicons/dist/codicon.css';
+@import '@anima-solutions/design-system/fonts/inter.css';
 
 /* Titlebar clusters: 24×24 hit targets, 13.9px glyphs. codicon.css is
    unlayered (`font: 16px/1`); Tailwind utilities in @layer lose that fight. */
@@ -86,6 +87,78 @@
   .aui-md
   [data-slot='code-card'][data-streaming='true'] {
   animation-play-state: paused !important;
+}
+
+/* Ânima design system rounding. The DS rounds generously (12px controls, 28px
+   cards); Hermes derives its whole radius scale from --radius-scalar, and 0.75
+   lands that scale on the DS's steps (6/7.5/9/12/18/24/30px vs
+   6/8/10/12/16/20/28px). Scoped to the Ânima theme and its accent retints, so
+   every other theme keeps Hermes's own corners. */
+:root {
+  /* Corner radii the primitives hard-wire by role (Hermes defaults): buttons
+     and form controls, icon buttons, badges, selectable chips. */
+  --ui-radius-control: 2.5px;
+  --ui-radius-icon: 4px;
+  --ui-radius-badge: 3px;
+  --ui-radius-chip: 6px;
+  /* Navigation rows (chat sidebar, settings menu). */
+  --ui-nav-row-height: 1.75rem;
+  --ui-nav-row-font-size: 0.8125rem;
+}
+
+:root:is([data-hermes-theme='anima'], [data-hermes-theme^='anima-accent-']) {
+  --radius-scalar: 0.75;
+  /* DS: Button / Input / Select / Toggle are rounded-xl, Badge rounded-3xl. */
+  --ui-radius-control: 12px;
+  --ui-radius-icon: 10px;
+  --ui-radius-badge: 20px;
+  --ui-radius-chip: 12px;
+  /* DS Sidebar menu rows are h-8 / text-sm. */
+  --ui-nav-row-height: 32px;
+  --ui-nav-row-font-size: 14px;
+}
+
+/* Ânima control density: the DS sizes (Button xs 24 / sm 32 / default 36 / lg 40px,
+   Input and SelectTrigger 36px, 14px text) instead of Hermes's padding-driven
+   compact sizes. Keyed on the primitives' own data-slot / data-size / data-variant
+   attributes; boxless variants (text, link, grip) and the icon/inline/micro sizes
+   keep their own geometry. In px, not rem: Hermes scales its root font (15px by
+   default), and the DS values are absolute. Approved as "Option A" (everywhere, not forms only). */
+:root:is([data-hermes-theme='anima'], [data-hermes-theme^='anima-accent-']) {
+  & [data-slot='button']:not(
+      [data-variant='text'],
+      [data-variant='textStrong'],
+      [data-variant='link'],
+      [data-variant='grip']
+    ):is([data-size='default'], [data-size='sm'], [data-size='lg']) {
+    min-height: 36px;
+    padding-block: 0;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  & [data-slot='button'][data-size='sm']:not([data-variant='text'], [data-variant='textStrong'], [data-variant='link'], [data-variant='grip']) {
+    min-height: 32px;
+  }
+
+  & [data-slot='button'][data-size='lg']:not([data-variant='text'], [data-variant='textStrong'], [data-variant='link'], [data-variant='grip']) {
+    min-height: 40px;
+  }
+
+  & [data-slot='button'][data-size='xs']:not([data-variant='text'], [data-variant='textStrong'], [data-variant='link'], [data-variant='grip']) {
+    min-height: 24px;
+    padding-block: 0;
+    font-size: 12px;
+  }
+
+  & :is(input[data-slot='input'], [data-slot='input-group'], [data-slot='select-trigger']) {
+    min-height: 36px;
+    font-size: 14px;
+  }
+
+  & [data-slot='textarea'] {
+    font-size: 14px;
+  }
 }
 
 /* Sidebar sections: tall viewports give each its own scroller; compact ones

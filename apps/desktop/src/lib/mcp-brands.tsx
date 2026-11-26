@@ -44,8 +44,9 @@ import {
   SiYoutube,
   SiZapier
 } from '@icons-pack/react-simple-icons'
-import { IconBrandSlack } from '@tabler/icons-react'
 import type { ComponentType, SVGProps } from 'react'
+
+import { SlackLogo } from '@/lib/icons'
 
 export interface McpBrand {
   Icon: ComponentType<SVGProps<SVGSVGElement>>
@@ -88,7 +89,7 @@ export const MCP_BRAND_ICONS: Record<string, McpBrand> = {
   // simple-icons dropped Slack's mark on a trademark request and the site's
   // favicon is a flat purple square that reads as a blank disc at chip size.
   // Tabler's outline pinwheel is the one recognisable Slack we can ship.
-  slack: { Icon: IconBrandSlack as ComponentType<SVGProps<SVGSVGElement>>, color: '#4A154B' },
+  slack: { Icon: SlackLogo as ComponentType<SVGProps<SVGSVGElement>>, color: '#4A154B' },
   spotify: { Icon: SiSpotify, color: '#1DB954' },
   square: { Icon: SiSquare, color: '#3E4348', monochrome: true },
   stripe: { Icon: SiStripe, color: '#635BFF' },

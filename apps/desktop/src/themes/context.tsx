@@ -32,7 +32,7 @@ import {
 import { writeBootPalette } from './boot-palette'
 import { $chatFontFamily, resolveChatFontFamily } from './chat-font'
 import { harmonize, normalizeHex, readableInk } from './color'
-import { BUILTIN_THEME_LIST, DEFAULT_SKIN_NAME, DEFAULT_TYPOGRAPHY, nousTheme, RETIRED_SKINS } from './presets'
+import { BUILTIN_THEME_LIST, DEFAULT_MODE, DEFAULT_SKIN_NAME, DEFAULT_TYPOGRAPHY, nousTheme, RETIRED_SKINS } from './presets'
 import { $pendingModeApply } from './request'
 import { retintTheme } from './retint'
 import type { DesktopTheme, DesktopThemeColors, DesktopThemeTypography } from './types'
@@ -62,15 +62,11 @@ const normalizeSkin = (name: string | null): string =>
   name && resolveTheme(name) && !RETIRED_SKINS.has(name) ? name : DEFAULT_SKIN_NAME
 
 /**
- * A stored mode, or `system` when there isn't one.
- *
- * A fresh profile follows the OS. Defaulting to `light` meant someone whose
- * desktop is dark got a white window on first launch and had to go find the
- * setting — and with per-appearance translucency it also handed them light's
- * much heavier tint, tuned for a bright desktop they don't have.
+ * A stored mode, or DEFAULT_MODE (dark, the Ânima design system's primary
+ * theme) when there isn't one. `system` stays available as an explicit pick.
  */
 const normalizeMode = (value: string | null): ThemeMode =>
-  value === 'light' || value === 'dark' || value === 'system' ? value : 'system'
+  value === 'light' || value === 'dark' || value === 'system' ? value : DEFAULT_MODE
 
 // ─── Per-profile appearance persistence ─────────────────────────────────────
 // Skin and mode are each stored per profile. "default" isn't a real profile —

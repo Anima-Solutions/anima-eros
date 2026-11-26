@@ -33,6 +33,8 @@ minimumReleaseAge: 20160
 # minimumReleaseAgeExcludePrune stays off: it would run on every install and rewrite this tracked
 # file on users' machines.
 minimumReleaseAgeExclude:
+  - '@anima-solutions/*'  # first-party design system (Ânima); versions are pinned exactly
+  - react-resizable-panels@4.24.2  # floor required by @anima-solutions/design-system@2026.11.2; matures 2026-12-08, drop then
   - electron@44.10.2  # CVE-2026-111497 (Node2Shell, CISA KEV): 44.9.3 bundles vulnerable Node 24.22.0; 44.10.2 bundles 24.22.2
   - pele@1.13.0  # the desktop diagram swap was parity-checked on it (math labels need 1.8.0+)
 

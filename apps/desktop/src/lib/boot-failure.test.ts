@@ -1,8 +1,9 @@
-import collapseBold from '@nous-research/ui/fonts/Collapse-Bold.woff2?url'
+import interVariable from '@anima-solutions/design-system/fonts/inter-latin-opsz-normal.woff2?url'
 import { within } from '@testing-library/dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import { showBootFailure } from './boot-failure'
+import { PRODUCT_NAME } from './brand'
 import { bootRenderer } from './ui-preferences/boot'
 
 let root: HTMLDivElement
@@ -38,7 +39,7 @@ it('shows a rejected loader’s cause and reloads only when the user clicks Relo
   await bootRenderer(() => Promise.reject(error)).catch(error => showBootFailure(error, reload))
 
   expect(console.error).toHaveBeenCalledWith('Hermes failed to load', error)
-  expect(within(root).getByRole('heading', { level: 1 }).textContent).toBe('Hermes couldn’t load')
+  expect(within(root).getByRole('heading', { level: 1 }).textContent).toBe(`${PRODUCT_NAME} couldn’t load`)
   expect(within(root).getByRole('alert').textContent).toContain(
     'Part of the app didn’t load; reloading usually fixes it.'
   )
@@ -98,19 +99,18 @@ it('shows the notice in an opaque secondary window', () => {
 it('shows a decorative wordmark above the accessible heading without app CSS', () => {
   showBootFailure(new Error('CSS failed'), vi.fn())
 
-  const wordmark = within(root).getByText('HERMES AGENT')
-  const heading = within(root).getByRole('heading', { level: 1, name: 'Hermes couldn’t load' })
+  const wordmark = within(root).getByText(PRODUCT_NAME)
+  const heading = within(root).getByRole('heading', { level: 1, name: `${PRODUCT_NAME} couldn’t load` })
   const alert = within(root).getByRole('alert')
   expect(wordmark.tagName).toBe('P')
   expect(wordmark.getAttribute('aria-hidden')).toBe('true')
   expect(wordmark.nextElementSibling).toBe(alert)
   expect(alert.contains(heading)).toBe(true)
   expect(within(root).getByRole('main').getAttribute('lang')).toBe('en')
-  expect(wordmark.style.fontFamily).toBe('Collapse, system-ui, sans-serif')
-  expect(wordmark.style.fontWeight).toBe('700')
-  expect(wordmark.style.letterSpacing).toBe('0.08em')
-  expect(wordmark.style.lineHeight).toBe('0.9')
-  expect(wordmark.style.textTransform).toBe('uppercase')
+  expect(wordmark.style.fontFamily).toBe('"Inter Variable", system-ui, sans-serif')
+  expect(wordmark.style.fontWeight).toBe('600')
+  expect(wordmark.style.letterSpacing).toBe('-0.03em')
+  expect(wordmark.style.lineHeight).toBe('0.95')
   expect(wordmark.style.marginBottom).toBe('24px')
   expect(heading.style.fontSize).toBe('1.125rem')
   expect(heading.style.fontWeight).toBe('600')
@@ -143,7 +143,7 @@ it('paints its own background and ink from the theme snapshot, whatever the page
   expect(notice.style.color).toBe(palette.foreground)
   expect(notice.style.position).toBe('fixed')
   expect(notice.style.inset).toBe('0px')
-  expect(within(root).getByText('HERMES AGENT').style.color).toBe(palette.accent)
+  expect(within(root).getByText(PRODUCT_NAME).style.color).toBe(palette.accent)
   const button = within(root).getByRole('button', { name: 'Reload' })
   expect(button.style.backgroundColor).toBe(palette.accent)
   expect(button.style.color).toBe(palette.accentForeground)
@@ -173,7 +173,7 @@ it.each([
   expect(notice.style.backgroundColor).toBe('')
   expect(notice.style.color).toBe('')
   expect(notice.style.position).toBe('')
-  expect(within(root).getByText('HERMES AGENT').style.color).toBe('currentcolor')
+  expect(within(root).getByText(PRODUCT_NAME).style.color).toBe('currentcolor')
   const button = within(root).getByRole('button', { name: 'Reload' })
   expect(button.style.backgroundColor).toBe('transparent')
   expect(button.style.color).toBe('inherit')
@@ -182,7 +182,7 @@ it.each([
   expect(button.style.borderTopColor).toBe('currentcolor')
 })
 
-it('registers the bundled Collapse face without waiting to show recovery', () => {
+it('registers the bundled Inter face without waiting to show recovery', () => {
   const face = { load: vi.fn(() => new Promise(() => {})) }
 
   const FontFace = vi.fn(function () {
@@ -195,7 +195,7 @@ it('registers the bundled Collapse face without waiting to show recovery', () =>
 
   showBootFailure(new Error('CSS failed'), vi.fn())
 
-  expect(FontFace).toHaveBeenCalledWith('Collapse', `url("${collapseBold}")`, { weight: '700', display: 'swap' })
+  expect(FontFace).toHaveBeenCalledWith('Inter Variable', `url("${interVariable}")`, { weight: '100 900', display: 'swap' })
   expect(add).toHaveBeenCalledWith(face)
   expect(face.load).toHaveBeenCalledOnce()
   expect(within(root).getByRole('button', { name: 'Reload' })).toBeTruthy()
@@ -213,7 +213,7 @@ it.each(['FontFace', 'document.fonts'])('shows recovery when %s is unavailable',
   expect(() => showBootFailure(new Error('CSS failed'), vi.fn())).not.toThrow()
   expect(FontFace).not.toHaveBeenCalled()
   expect(add).not.toHaveBeenCalled()
-  expect(within(root).getByText('HERMES AGENT').style.fontFamily).toContain('system-ui')
+  expect(within(root).getByText(PRODUCT_NAME).style.fontFamily).toContain('system-ui')
 })
 
 it.each(['constructor', 'load', 'rejection'])('keeps recovery usable after a font %s failure', async failure => {
