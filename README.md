@@ -108,6 +108,7 @@ O `--no-build` usa a imagem enviada no passo 2. Sem ele, o Compose tentaria cons
 
 ```sh
 docker compose exec hermes hermes setup                       # modelo e chaves de API
+docker compose exec hermes hermes plugins enable anima-pt-br  # pacote pt-BR: plugins do usuário só carregam ativados
 docker compose exec hermes hermes config set display.language pt
 docker compose exec hermes hermes config set webapp.enabled true
 docker compose exec hermes hermes config set webapp.host 0.0.0.0
@@ -184,7 +185,14 @@ ssh vps_anima01 'cd /srv/stacks/anima-eros-demo && docker compose up -d --no-bui
 Troca a imagem do Hermes que roda em produção (`/srv/stacks/anima-hermes`, container `anima-hermes-hermes`) pela do
 Ânima Eros, **mantendo** os dados, os domínios, o login OAuth, o vault do Obsidian e os pacotes de VNC/XFCE.
 
-Faça isto só depois de aprovar a demo do [guia de instalação](#guia-de-instalação).
+Faça isto só depois de aprovar a demo do [guia de instalação](#guia-de-instalação) **e** de concluir a
+refatoração da metodologia de implantação (abaixo).
+
+> **Pendente antes da migração final: refatorar a metodologia de implantação.** O modelo atual (portas publicadas no
+> host, sub-rede própria, o NPM entrando na rede do Hermes) não segue o padrão das outras stacks do VPS. A refatoração
+> revê o compose, a forma de entregar a imagem e estes guias: o Hermes entra na rede compartilhada do NPM
+> (`anima_proxymanager_shared_network`, externa), só com `expose`, sem `ports` nem sub-rede. Os passos de instalação e
+> de substituição acima serão reescritos nessa etapa.
 
 ### O que muda e o que não muda
 
@@ -259,6 +267,7 @@ Registre: `git add -A && git commit -m "Ânima Eros: imagem do fork com design s
 docker compose build          # só instala os pacotes de VNC/XFCE sobre hermes-agent:anima; não precisa de token
 docker compose up -d
 docker compose logs -f
+docker compose exec hermes hermes plugins enable anima-pt-br
 docker compose exec hermes hermes config set display.language pt
 docker compose restart
 ```

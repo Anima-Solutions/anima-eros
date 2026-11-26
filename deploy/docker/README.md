@@ -41,6 +41,8 @@ docker compose exec hermes hermes config set webapp.enabled true
 docker compose exec hermes hermes config set webapp.host 0.0.0.0
 docker compose exec hermes hermes config set webapp.port 9120        # = WEBAPP_PORT
 docker compose exec hermes hermes config set webapp.public_url http://localhost:9120
+docker compose exec hermes hermes plugins enable anima-pt-br         # pacote pt-BR (plugins do usuário só carregam ativados)
+docker compose exec hermes hermes config set display.language pt
 docker compose restart
 ```
 
