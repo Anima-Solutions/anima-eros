@@ -1,243 +1,308 @@
-<p align="center">
-  <img src="assets/banner.png" alt="Hermes Agent" width="100%">
-</p>
+# Ânima Eros
 
-# Hermes Agent ☤
-<p align="center">
-  <a href="https://hermes-agent.nousresearch.com/">Hermes Agent</a> | <a href="https://hermes-agent.nousresearch.com/">Hermes Desktop</a>
-</p>
-<p align="center">
-  <a href="https://hermes-agent.nousresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-hermes--agent.nousresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
-  <a href="https://discord.gg/NousResearch"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://github.com/NousResearch/hermes-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
-  <a href="https://nousresearch.com"><img src="https://img.shields.io/badge/Built%20by-Nous%20Research-blueviolet?style=for-the-badge" alt="Built by Nous Research"></a>
-  <a href="README.zh-CN.md"><img src="https://img.shields.io/badge/Lang-中文-red?style=for-the-badge" alt="中文"></a>
-  <a href="README.ur-pk.md"><img src="https://img.shields.io/badge/Lang-اردو-green?style=for-the-badge" alt="اردو"></a>
-  <a href="README.es.md"><img src="https://img.shields.io/badge/Lang-Español-orange?style=for-the-badge" alt="Español"></a>
-</p>
+O Ânima Eros é o agente de IA da Ânima: um fork do [Hermes Agent](https://github.com/NousResearch/hermes-agent)
+com o design system Ânima (`@anima-solutions/design-system`), a marca Ânima Eros e a interface em português.
+Este repositório gera uma imagem Docker com o gateway, o dashboard e o Webapp.
 
-**The self-improving AI agent built by [Nous Research](https://nousresearch.com).** It's the only agent with a built-in learning loop — it creates skills from experience, improves them during use, nudges itself to persist knowledge, searches its own past conversations, and builds a deepening model of who you are across sessions. Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle. It's not tied to your laptop — talk to it from Telegram while it works on a cloud VM.
+- [Guia de instalação](#guia-de-instalação): sobe uma stack nova, com dados próprios.
+- [Guia de substituição](#guia-de-substituição): troca o Hermes que já roda em produção pelo Ânima Eros, mantendo os dados.
 
-Use any model you want — [Nous Portal](https://portal.nousresearch.com), OpenRouter, OpenAI, your own endpoint, and [many others](https://hermes-agent.nousresearch.com/docs/integrations/providers). Switch with `hermes model` — no code changes, no lock-in.
+Os detalhes do container (variáveis do `.env`, portas, rede) estão em [`deploy/docker/README.md`](deploy/docker/README.md).
 
-<table>
-<tr><td><b>A real terminal interface</b></td><td>Full TUI with multiline editing, slash-command autocomplete, conversation history, interrupt-and-redirect, and streaming tool output.</td></tr>
-<tr><td><b>Lives where you do</b></td><td>Telegram, Discord, Slack, WhatsApp, Signal, and CLI — all from a single gateway process. Voice memo transcription, cross-platform conversation continuity.</td></tr>
-<tr><td><b>A closed learning loop</b></td><td>Agent-curated memory with periodic nudges. Autonomous skill creation after complex tasks. Skills self-improve during use. FTS5 session search with LLM summarization for cross-session recall. <a href="https://github.com/plastic-labs/honcho">Honcho</a> dialectic user modeling. Compatible with the <a href="https://agentskills.io">agentskills.io</a> open standard.</td></tr>
-<tr><td><b>Scheduled automations</b></td><td>Built-in cron scheduler with delivery to any platform. Daily reports, nightly backups, weekly audits — all in natural language, running unattended.</td></tr>
-<tr><td><b>Delegates and parallelizes</b></td><td>Spawn isolated subagents for parallel workstreams. In Desktop, choose their provider, model, and limits under Settings → Model → Subagents, then Apply the complete route. Write Python scripts that call tools via RPC, collapsing multi-step pipelines into zero-context-cost turns.</td></tr>
-<tr><td><b>Runs anywhere, not just your laptop</b></td><td>Six built-in terminal backends — local, Docker, SSH, Modal, Daytona, and Vercel Sandbox — plus plugin backends such as Singularity/Apptainer. Daytona and Modal offer serverless persistence — your agent's environment hibernates when idle and wakes on demand, costing nearly nothing between sessions. Run it on a $5 VPS or a GPU cluster.</td></tr>
-<tr><td><b>Research-ready</b></td><td>Batch trajectory generation, trajectory compression for training the next generation of tool-calling models.</td></tr>
-</table>
+## Antes de começar
 
----
+| Item | Onde |
+|---|---|
+| Docker com BuildKit e Compose v2 | na máquina de build e no VPS |
+| Token do GitHub com `read:packages` | só na máquina de build, em `NODE_AUTH_TOKEN` (o design system é privado) |
+| Acesso SSH ao VPS como root | aqui o alias `vps_anima01`, do `~/.ssh/config` |
+| Nginx Proxy Manager (NPM) no VPS | container `anima-proxy-manager-app`, stack em `/srv/stacks/anima-proxy-manager` |
+| DNS dos domínios apontando para o VPS | registros A para o IP do `vps_anima01` |
 
-## Quick Install
+A imagem é construída **na sua máquina** e enviada pronta para o VPS: o token nunca sai daqui e o VPS não precisa
+aguentar o build. A imagem é `amd64` e tem cerca de 4,8 GB (1,5 a 2 GB compactada na transferência).
 
-### Linux, macOS, WSL2
+O token fica só no ambiente do shell, nunca em arquivo do repositório:
 
-```bash
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+```sh
+export NODE_AUTH_TOKEN=...   # token com read:packages
 ```
 
-### Windows (native, PowerShell)
+---
 
-> **Heads up:** Native Windows runs Hermes without WSL — CLI, gateway, TUI, and tools all work natively. If you'd rather use WSL2, the Linux/macOS one-liner above works there too. Found a bug? Please [file issues](https://github.com/NousResearch/hermes-agent/issues).
+## Guia de instalação
 
-Run this in PowerShell:
+Sobe o Ânima Eros como uma stack **separada** de qualquer Hermes que já exista no VPS. Os valores abaixo são os da
+demo; para outra instalação, troque nomes, pastas, rede, sub-rede e domínios.
 
-```powershell
-iex (irm https://hermes-agent.nousresearch.com/install.ps1)
+| | Demo |
+|---|---|
+| Stack (compose) | `/srv/stacks/anima-eros-demo` |
+| Dados (`~/.hermes` do container) | `/srv/appdata/anima-eros-demo/hermes` |
+| Container | `anima-eros-demo` |
+| Rede / sub-rede | `anima-eros-demo-net` / `172.30.0.0/24` (livre no `vps_anima01`) |
+| Dashboard | `https://demo.eros.animahub.ai` |
+| Webapp | `https://demo.app.eros.animahub.ai` |
+
+### 1. Construir a imagem (na sua máquina)
+
+```sh
+cd deploy/docker
+docker compose build          # usa NODE_AUTH_TOKEN; gera hermes-agent:anima
 ```
 
-The source installer delegates Python 3.14, Node.js, npm, pnpm, ripgrep, FFmpeg,
-and Python dependencies to PM. If Git is absent, it stages the verified Git
-for Windows archive in Hermes' tool store. It does not replace your system Git.
-See [installation methods](https://hermes-agent.nousresearch.com/docs/getting-started/installation)
-for the separate MSIX/App Installer package and its update ownership.
+### 2. Enviar a imagem e a pasta de deploy
 
-> **Android / Termux:** A signed APT repository is available for aarch64 devices, with a `stable` channel (tagged releases) and a prerelease `canary` channel. The package includes Python, Node.js, and the TUI. Use the [Termux guide](https://hermes-agent.nousresearch.com/docs/getting-started/termux), not the desktop/server installer script.
->
-> **Windows:** Native Windows is fully supported — the PowerShell one-liner above installs everything. If you'd rather use WSL2, the Linux command works there too. Native Windows install lives under `%LOCALAPPDATA%\hermes`; WSL2 installs under `~/.hermes` as on Linux.
+```sh
+docker save hermes-agent:anima | gzip | ssh vps_anima01 'gunzip | docker load'
 
-After installation:
-
-```bash
-source ~/.bashrc    # reload shell (or: source ~/.zshrc)
-hermes              # start chatting!
+ssh vps_anima01 'mkdir -p /srv/stacks/anima-eros-demo /srv/appdata/anima-eros-demo/hermes'
+rsync -av --exclude .env --exclude data --exclude exemplos \
+  deploy/docker/ vps_anima01:/srv/stacks/anima-eros-demo/
 ```
 
-### Troubleshooting
+O `rsync` leva o `docker-compose.yml`, o `.env.example` e o pacote de idioma `plugins/anima-pt-br`. O `.env` e a
+pasta `data/` da sua máquina ficam de fora de propósito.
 
-#### Windows Defender or antivirus flags `uv.exe` as malware
+### 3. Criar o `.env` no VPS
 
-If your antivirus (Bitdefender, Windows Defender, etc.) quarantines `uv.exe` from the Hermes `bin` folder (`%LOCALAPPDATA%\hermes\bin\uv.exe`), this is a **false positive**. The file is Astral's `uv` — the Rust Python package manager Hermes bundles to manage its Python environment. ML-based antivirus engines commonly flag unsigned Rust binaries that download and install packages.
-
-**To verify your copy is authentic:**
-
-```powershell
-# Install GitHub CLI if needed
-winget install --id GitHub.cli
-
-# Login to GitHub
-gh auth login
-
-# Run verification
-$uv = "$env:LOCALAPPDATA\hermes\bin\uv.exe"
-$ver = (& $uv --version).Split(' ')[1]
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$zip = "$env:TEMP\uv.zip"
-Invoke-WebRequest "https://github.com/astral-sh/uv/releases/download/$ver/uv-x86_64-pc-windows-msvc.zip" -OutFile $zip -UseBasicParsing
-gh attestation verify $zip --repo astral-sh/uv
-Expand-Archive $zip "$env:TEMP\uv_x" -Force
-(Get-FileHash "$env:TEMP\uv_x\uv.exe").Hash -eq (Get-FileHash $uv).Hash
+```sh
+ssh vps_anima01
+cd /srv/stacks/anima-eros-demo
+cp .env.example .env && chmod 600 .env
 ```
 
-If attestation says "Verification succeeded" and the last line prints `True`, you're good.
+Ajuste no `.env` (gere segredos novos, não reaproveite os de outra máquina):
 
-**To whitelist Hermes:**
-- **Windows Defender:** Run PowerShell as Admin → `Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\hermes\bin"`
-- **Bitdefender:** Add an exception in the Bitdefender console (Protection > Antivirus > Settings > Manage Exceptions)
-- Whitelist the **folder**, not the file hash — Hermes updates `uv` and the hash changes every version
+```ini
+COMPOSE_PROJECT_NAME=anima-eros-demo
+HERMES_IMAGE=hermes-agent:anima
+HERMES_CONTAINER_NAME=anima-eros-demo
+HERMES_DATA_DIR=/srv/appdata/anima-eros-demo/hermes
+HERMES_UID=1000
+HERMES_GID=1000
 
-For more context, see the upstream Astral reports: [astral-sh/uv#13553](https://github.com/astral-sh/uv/issues/13553), [astral-sh/uv#15011](https://github.com/astral-sh/uv/issues/15011), [astral-sh/uv#10079](https://github.com/astral-sh/uv/issues/10079).
+HOST_BIND_IP=127.0.0.1
+HERMES_NETWORK=anima-eros-demo-net
+HERMES_SUBNET=172.30.0.0/24
 
----
-
-## Getting Started
-
-```bash
-hermes              # Interactive CLI — start a conversation
-hermes model        # Choose your LLM provider and model
-hermes tools        # Configure which tools are enabled
-hermes config set   # Set individual config values
-hermes config get   # Print individual config values
-hermes gateway      # Start the messaging gateway (Telegram, Discord, etc.)
-hermes setup        # Run the full setup wizard (configures everything at once)
-hermes update       # Update to the latest version
-hermes doctor       # Diagnose any issues
+DASHBOARD_PUBLIC_URL=https://demo.eros.animahub.ai
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=           # openssl rand -hex 16
+DASHBOARD_SESSION_SECRET=     # openssl rand -base64 32
+API_SERVER_KEY=               # vazio = API desligada; para ligar: openssl rand -hex 32
 ```
 
-📖 **[Full documentation →](https://hermes-agent.nousresearch.com/docs/)**
+`HOST_BIND_IP=127.0.0.1` mantém as portas fora da internet: quem publica é o NPM, pela rede Docker.
 
----
+### 4. Subir o container
 
-## Skip the API-key collection — Nous Portal
-
-Hermes works with whatever provider you want — that's not changing. But if you'd rather not collect five separate API keys for the model, web search, image generation, TTS, and a cloud browser, **[Nous Portal](https://portal.nousresearch.com)** covers all of them under one subscription:
-
-- **300+ models** — pick any of them with `/model <name>`
-- **Tool Gateway** — web search, image generation (FAL), text-to-speech (OpenAI), cloud browser (Browser Use), all routed through your sub. No extra accounts.
-
-One command from a fresh install:
-
-```bash
-hermes setup --portal
+```sh
+docker compose up -d --no-build
+docker compose logs -f        # Ctrl+C quando o gateway e o dashboard estiverem no ar
 ```
 
-That logs you in via OAuth, sets Nous as your provider, and turns on the Tool Gateway. Check what's wired up any time with `hermes portal info`. Full details on the [Tool Gateway docs page](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway).
+O `--no-build` usa a imagem enviada no passo 2. Sem ele, o Compose tentaria construir de novo no VPS (e falharia sem o token).
 
-You can still bring your own keys per-tool whenever you want — the gateway is per-backend, not all-or-nothing.
+### 5. Configurar o Hermes
 
----
-
-## CLI vs Messaging Quick Reference
-
-Hermes has two entry points: start the terminal UI with `hermes`, or run the gateway and talk to it from Telegram, Discord, Slack, WhatsApp, Signal, or Email. Once you're in a conversation, many slash commands are shared across both interfaces.
-
-| Action                         | CLI                                           | Messaging platforms                                                              |
-| ------------------------------ | --------------------------------------------- | -------------------------------------------------------------------------------- |
-| Start chatting                 | `hermes`                                      | Run `hermes gateway setup` + `hermes gateway start`, then send the bot a message |
-| Start fresh conversation       | `/new` or `/reset`                            | `/new` or `/reset`                                                               |
-| Change model                   | `/model [provider:model]`                     | `/model [provider:model]`                                                        |
-| Set a personality              | `/personality [name]`                         | `/personality [name]`                                                            |
-| Retry or undo the last turn    | `/retry`, `/undo`                             | `/retry`, `/undo`                                                                |
-| Compress context / check usage | `/compress`, `/usage`, `/insights [--days N]` | `/compress`, `/usage`, `/insights [days]`                                        |
-| Browse skills                  | `/skills` or `/<skill-name>`                  | `/<skill-name>`                                                                  |
-| Interrupt current work         | `Ctrl+C` or send a new message                | `/stop` or send a new message                                                    |
-| Platform-specific status       | `/platforms`                                  | `/status`, `/sethome`                                                            |
-
-For the full command lists, see the [CLI guide](https://hermes-agent.nousresearch.com/docs/user-guide/cli) and the [Messaging Gateway guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging).
-
----
-
-## Documentation
-
-All documentation lives at **[hermes-agent.nousresearch.com/docs](https://hermes-agent.nousresearch.com/docs/)**:
-
-| Section                                                                                             | What's Covered                                             |
-| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [Quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart)                 | Install → setup → first conversation in 2 minutes          |
-| [CLI Usage](https://hermes-agent.nousresearch.com/docs/user-guide/cli)                              | Commands, keybindings, personalities, sessions             |
-| [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)                | Config file, providers, models, all options                |
-| [Messaging Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)                | Telegram, Discord, Slack, WhatsApp, Signal, Home Assistant |
-| [Security](https://hermes-agent.nousresearch.com/docs/user-guide/security)                          | Command approval, DM pairing, container isolation          |
-| [Tools & Toolsets](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools)            | 40+ tools, toolset system, terminal backends               |
-| [Skills System](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills)              | Procedural memory, Skills Hub, creating skills             |
-| [Memory](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory)                     | Persistent memory, user profiles, best practices           |
-| [MCP Integration](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp)               | Connect any MCP server for extended capabilities           |
-| [Cron Scheduling](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron)              | Scheduled tasks with platform delivery                     |
-| [Context Files](https://hermes-agent.nousresearch.com/docs/user-guide/features/context-files)       | Project context that shapes every conversation             |
-| [Architecture](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture)             | Project structure, agent loop, key classes                 |
-| [Contributing](https://hermes-agent.nousresearch.com/docs/developer-guide/contributing)             | Development setup, PR process, code style                  |
-| [CLI Reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands)                  | All commands and flags                                     |
-| [Environment Variables](https://hermes-agent.nousresearch.com/docs/reference/environment-variables) | Complete env var reference                                 |
-
----
-
-## Migrating from OpenClaw or another agent
-
-If you're coming from OpenClaw, Claude Code, Codex CLI or Cursor, Hermes can import your settings, memories and skills (and, for OpenClaw, API keys when you ask for them).
-
-**During setup:** `hermes setup` asks whether to import from another agent, pre-selects the ones it finds (`~/.openclaw`, `~/.claude`, `~/.codex`, `~/.cursor`), installs the official `agent-importers` plugin and runs the import with a preview first.
-
-**Anytime after install:**
-
-```bash
-hermes plugins install agent-importers          # once per profile
-hermes import-agent openclaw                    # interactive migration (full preset)
-hermes import-agent openclaw --dry-run          # preview what would be migrated
-hermes import-agent openclaw --migrate-secrets  # also bring allowlisted API keys
-hermes import-agent claude-code                 # or codex / cursor
+```sh
+docker compose exec hermes hermes setup                       # modelo e chaves de API
+docker compose exec hermes hermes config set display.language pt
+docker compose exec hermes hermes config set webapp.enabled true
+docker compose exec hermes hermes config set webapp.host 0.0.0.0
+docker compose exec hermes hermes config set webapp.port 9120
+docker compose exec hermes hermes config set webapp.public_url https://demo.app.eros.animahub.ai
 ```
 
-What gets imported from OpenClaw:
+Em `/srv/appdata/anima-eros-demo/hermes/config.yaml`, diga ao Hermes que ele está atrás de um proxy HTTPS (a sub-rede é a
+`HERMES_SUBNET`, por onde o NPM chega):
 
-- **SOUL.md** — persona file
-- **Memories** — MEMORY.md and USER.md entries
-- **Skills** — user-created skills → `~/.hermes/skills/openclaw-imports/`
-- **Command allowlist** — approval patterns
-- **Messaging settings** — platform configs, allowed users, working directory
-- **API keys** — allowlisted secrets (Telegram, OpenRouter, OpenAI, Anthropic, ElevenLabs), only with `--migrate-secrets`
-- **TTS assets** — workspace audio files
-- **Workspace instructions** — AGENTS.md (with `--workspace-target`)
+```yaml
+dashboard:
+  trusted_proxies:
+    - "172.30.0.0/24"
+```
 
-`hermes claw migrate` still works as the older spelling. See the [OpenClaw migration guide](https://hermes-agent.nousresearch.com/docs/guides/migrate-from-openclaw) and [Import from Other Agents](https://hermes-agent.nousresearch.com/docs/user-guide/import-from-other-agents).
+Depois: `docker compose restart`.
+
+### 6. Ligar o NPM à rede da stack
+
+Agora, sem reiniciar o NPM:
+
+```sh
+docker network connect anima-eros-demo-net anima-proxy-manager-app
+```
+
+Para a ligação sobreviver a um `docker compose up` do NPM, registre a rede em
+`/srv/stacks/anima-proxy-manager/docker-compose.yml`:
+
+```yaml
+services:
+  app:
+    networks: [default, anima-eros-demo-net]
+
+networks:
+  default:
+    external: true
+    name: anima_proxymanager_shared_network
+  anima-eros-demo-net:
+    external: true
+```
+
+### 7. Criar os Proxy Hosts no NPM
+
+Crie dois, ambos com **Websockets Support**, **Block Common Exploits**, certificado Let's Encrypt, **Force SSL** e **HTTP/2**:
+
+| Domínio | Scheme | Forward Hostname | Forward Port |
+|---|---|---|---|
+| `demo.eros.animahub.ai` | `http` | `anima-eros-demo` | `9119` |
+| `demo.app.eros.animahub.ai` | `http` | `anima-eros-demo` | `9120` |
+
+### 8. Conferir
+
+- `https://demo.eros.animahub.ai` abre a tela de login Ânima; entre com `DASHBOARD_USERNAME` e `DASHBOARD_PASSWORD`.
+- `https://demo.app.eros.animahub.ai` abre o Webapp em português. No primeiro acesso de cada navegador o português leva
+  uns 15 s para aparecer (o backend ainda está respondendo); ao recarregar, aparece na hora.
+- `docker compose logs --tail 100` sem erros.
+
+### Atualizar
+
+Na sua máquina, com o `main` atualizado:
+
+```sh
+cd deploy/docker && docker compose build
+docker save hermes-agent:anima | gzip | ssh vps_anima01 'gunzip | docker load'
+rsync -av --exclude .env --exclude data --exclude exemplos deploy/docker/ vps_anima01:/srv/stacks/anima-eros-demo/
+ssh vps_anima01 'cd /srv/stacks/anima-eros-demo && docker compose up -d --no-build && docker image prune -f'
+```
 
 ---
 
-## Contributing
+## Guia de substituição
 
-We welcome contributions! See the [Contributing Guide](https://hermes-agent.nousresearch.com/docs/developer-guide/contributing) for development setup, code style, and PR process.
+Troca a imagem do Hermes que roda em produção (`/srv/stacks/anima-hermes`, container `anima-hermes-hermes`) pela do
+Ânima Eros, **mantendo** os dados, os domínios, o login OAuth, o vault do Obsidian e os pacotes de VNC/XFCE.
 
-Start with the [PM developer workflow](website/docs/reference/package-management.md#developer-workflow)
-for activation, daily use, dependency changes, and leaving the environment.
-[Development Setup](CONTRIBUTING.md#development-setup) covers the separate test environment and verification commands.
+Faça isto só depois de aprovar a demo do [guia de instalação](#guia-de-instalação).
+
+### O que muda e o que não muda
+
+| Muda | Fica igual |
+|---|---|
+| A base da imagem: `nousresearch/hermes-agent:latest` → `hermes-agent:anima` | `/srv/appdata/anima-hermes/hermes` (sessões, memórias, kanban, cron, perfis, `.env` interno) |
+| A marca, o design system e o idioma (pacote pt-BR) | Os domínios do dashboard e do Webapp e os Proxy Hosts do NPM |
+| | O login: OAuth no dashboard, usuário e senha no Webapp |
+| | A rede `anima_proxymanager_shared_network`, os limites de CPU/memória e o `shm_size` |
+
+> **Atenção:** a versão nova pode migrar os bancos (`state.db`, `kanban.db` e outros) de um jeito que a imagem antiga
+> não lê. Por isso o backup do passo 2 é obrigatório: é ele que permite voltar atrás.
+
+### 1. Enviar a imagem
+
+Se a demo já está no VPS com a versão que você aprovou, a imagem `hermes-agent:anima` já está lá. Senão, repita os
+passos 1 e 2 do guia de instalação (só a parte da imagem). Copie também o pacote de idioma:
+
+```sh
+rsync -av deploy/docker/plugins/anima-pt-br vps_anima01:/srv/stacks/anima-hermes/plugins/
+```
+
+### 2. Parar e fazer o backup
+
+Avise quem usa o Eros: ele fica fora do ar durante o backup (os dados têm cerca de 64 GB).
+
+```sh
+ssh vps_anima01
+cd /srv/stacks/anima-hermes
+docker compose stop
+
+# imagem atual, para poder voltar
+docker tag anima-hermes-screen:latest anima-hermes-screen:pre-eros
+
+# dados, com o container parado (consistência dos bancos SQLite)
+mkdir -p /srv/backups
+tar -C /srv/appdata/anima-hermes -I 'zstd -T0' -cf /srv/backups/anima-hermes-$(date +%F).tar.zst hermes
+ls -lh /srv/backups/
+```
+
+Confira que o arquivo existe e tem um tamanho coerente antes de continuar. O disco tem espaço folgado para ele.
+
+### 3. Apontar a stack para a imagem nova
+
+A pasta `/srv/stacks/anima-hermes` é um repositório git: as mudanças abaixo ficam registradas e podem ser desfeitas.
+
+No `Dockerfile`, troque só a primeira linha (os pacotes de VNC/XFCE continuam):
+
+```dockerfile
+FROM hermes-agent:anima
+```
+
+No `docker-compose.yml`:
+
+```yaml
+    build:
+      context: .
+      # remova "pull: true": hermes-agent:anima existe só neste VPS, não no Docker Hub
+    image: anima-eros-screen:latest
+    ...
+    volumes:
+      - /srv/storage/obsidian-impulse/vault:/opt/data/impulse/vault
+      - /srv/appdata/anima-hermes/hermes:/opt/data
+      - ./plugins/anima-pt-br:/opt/data/plugins/anima-pt-br:ro      # novo: pacote pt-BR
+```
+
+Registre: `git add -A && git commit -m "Ânima Eros: imagem do fork com design system e pt-BR"`.
+
+### 4. Construir e subir
+
+```sh
+docker compose build          # só instala os pacotes de VNC/XFCE sobre hermes-agent:anima; não precisa de token
+docker compose up -d
+docker compose logs -f
+docker compose exec hermes hermes config set display.language pt
+docker compose restart
+```
+
+### 5. Conferir
+
+- O dashboard abre e o login OAuth funciona.
+- O Webapp abre em português e entra com usuário e senha.
+- As sessões antigas, as memórias, o kanban e os cron jobs estão lá.
+- O VNC funciona e o vault do Obsidian aparece em `/opt/data/impulse/vault`.
+- O plugin antigo `anima-brand` não briga com a marca nova. Se a aparência ficar misturada:
+  `docker compose exec hermes hermes plugins disable anima-brand` e `docker compose restart`.
+
+### Voltar atrás
+
+Se algo der errado, volte à imagem e aos dados de antes:
+
+```sh
+cd /srv/stacks/anima-hermes
+docker compose down
+git revert --no-edit HEAD                       # Dockerfile e compose voltam a nousresearch/hermes-agent
+mv /srv/appdata/anima-hermes/hermes /srv/appdata/anima-hermes/hermes.eros-falhou
+tar -C /srv/appdata/anima-hermes -I zstd -xf /srv/backups/anima-hermes-AAAA-MM-DD.tar.zst
+docker tag anima-hermes-screen:pre-eros anima-hermes-screen:latest
+docker compose up -d --no-build
+```
+
+Restaurar os dados é necessário porque a versão nova pode ter migrado os bancos. A pasta `hermes.eros-falhou` guarda
+o que aconteceu depois da troca, para investigar; apague quando não precisar mais.
+
+### Depois da troca
+
+Com a produção estável por alguns dias, a demo pode sair do ar:
+
+```sh
+cd /srv/stacks/anima-eros-demo && docker compose down
+docker network disconnect anima-eros-demo-net anima-proxy-manager-app
+```
+
+Remova também os Proxy Hosts da demo no NPM e a rede `anima-eros-demo-net` do compose do NPM.
 
 ---
 
-## Community
+## Desenvolvimento
 
-- 💬 [Discord](https://discord.gg/NousResearch)
-- 📚 [Skills Hub](https://agentskills.io)
-- 🐛 [Issues](https://github.com/NousResearch/hermes-agent/issues)
-- 🔌 [computer-use-linux](https://github.com/avifenesh/computer-use-linux) — Linux desktop-control MCP server for Hermes and other MCP hosts, with AT-SPI accessibility trees, Wayland/X11 input, screenshots, and compositor window targeting.
-- 🔌 [HermesClaw](https://github.com/AaronWong1999/hermesclaw) — Community WeChat bridge: Run Hermes Agent and OpenClaw on the same WeChat account.
-
----
-
-## License
-
-MIT — see [LICENSE](LICENSE).
-
-Built by [Nous Research](https://nousresearch.com).
+O guia de desenvolvimento do Hermes continua valendo: veja [`AGENTS.md`](AGENTS.md) e [`CONTRIBUTING.md`](CONTRIBUTING.md).
+A documentação completa do Hermes está em <https://hermes-agent.nousresearch.com/docs/>.
