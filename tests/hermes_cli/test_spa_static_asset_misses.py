@@ -29,7 +29,7 @@ def _spa(monkeypatch, dist: Path, *, surface) -> TestClient:
 
 def _login_font_urls() -> list[str]:
     """The fonts the dashboard ships under ``web/public`` (Mondwest and the terminal face). The
-    sign-in page itself loads Oswald and Mona Sans from Google Fonts and names none of them."""
+    sign-in page itself loads Inter from Google Fonts and names none of them."""
     from hermes_cli.dashboard_auth.login_page import render_login_html
 
     assert "/fonts/" not in render_login_html()
