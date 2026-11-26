@@ -1,0 +1,10 @@
+# =============================================================================
+# Montagens que só existem num servidor. Copie para docker-compose.override.yml (não versionado):
+# o `docker compose` junta os dois arquivos sozinho, então o make up, o make deploy e o make shell
+# já usam estas montagens.
+# =============================================================================
+services:
+  eros:
+    volumes:
+      # Exemplo do vps_anima01: o vault do Obsidian da Impulse, que a stack anima-hermes já montava
+      - /srv/storage/obsidian-impulse/vault:/opt/data/impulse/vault

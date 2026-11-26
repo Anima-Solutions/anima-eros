@@ -1,0 +1,6 @@
+# Arquivos locais da stack (nunca versionar)
+data/
+exemplos/
+.env
+.env.restored
+docker-compose.override.yml

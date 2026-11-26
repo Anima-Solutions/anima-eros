@@ -1,0 +1,35 @@
+# =============================================================================
+# Desenvolvimento — a mesma imagem de produção na sua máquina, em http://localhost:DEV_WEBAPP_PORT
+# Uso: make dev (gera a imagem com `make build` antes, se ainda não existir)
+# =============================================================================
+name: ${APP_NAME:-anima-eros}-dev
+
+services:
+  eros-dev:
+    image: ${APP_NAME:-anima-eros}:${IMAGE_TAG:-latest}
+    container_name: ${APP_NAME:-anima-eros}-dev
+    restart: unless-stopped
+    command: ["gateway", "run"]
+    shm_size: 1g
+    # Só na própria máquina (127.0.0.1); nada fica exposto na rede.
+    ports:
+      - "127.0.0.1:${DEV_DASHBOARD_PORT:-9119}:9119"
+      - "127.0.0.1:${DEV_WEBAPP_PORT:-9120}:9120"
+    volumes:
+      - ${DEV_DATA_DIR:-./data}:/opt/data
+      - ./plugins/anima-pt-br:/opt/data/plugins/anima-pt-br:ro
+    environment:
+      HERMES_UID: ${HERMES_UID:-1000}
+      HERMES_GID: ${HERMES_GID:-1000}
+      HERMES_DASHBOARD: "1"
+      HERMES_DASHBOARD_HOST: 0.0.0.0
+      HERMES_DASHBOARD_PORT: "9119"
+      HERMES_DASHBOARD_BASIC_AUTH_USERNAME: ${DASHBOARD_USERNAME:?defina DASHBOARD_USERNAME no .env}
+      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: ${DASHBOARD_PASSWORD:?defina DASHBOARD_PASSWORD no .env}
+      HERMES_DASHBOARD_BASIC_AUTH_SECRET: ${DASHBOARD_SESSION_SECRET:?defina DASHBOARD_SESSION_SECRET no .env}
+      TZ: ${TZ:-America/Sao_Paulo}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

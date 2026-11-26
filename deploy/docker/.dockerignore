@@ -1,0 +1,3 @@
+# Contexto da camada do Eros (docker-compose.yml): só o Dockerfile. Dados, .env e backups ficam de fora.
+*
+!Dockerfile

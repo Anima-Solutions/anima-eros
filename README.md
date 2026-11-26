@@ -2,316 +2,225 @@
 
 O Ânima Eros é o agente de IA da Ânima: um fork do [Hermes Agent](https://github.com/NousResearch/hermes-agent)
 com o design system Ânima (`@anima-solutions/design-system`), a marca Ânima Eros e a interface em português.
-Este repositório gera uma imagem Docker com o gateway, o dashboard e o Webapp.
+Um container reúne o gateway, o dashboard, o Webapp e a API compatível com OpenAI.
 
-- [Guia de instalação](#guia-de-instalação): sobe uma stack nova, com dados próprios.
-- [Guia de substituição](#guia-de-substituição): troca o Hermes que já roda em produção pelo Ânima Eros, mantendo os dados.
+- [Guia de instalação](#guia-de-instalação): uma instalação nova, com dados próprios.
+- [Guia de migração](#guia-de-migração): troca o Hermes que já roda em produção pelo Ânima Eros, levando os dados.
 
-Os detalhes do container (variáveis do `.env`, portas, rede) estão em [`deploy/docker/README.md`](deploy/docker/README.md).
+A referência da stack (arquivos, variáveis, comandos, backup e teste) está em
+[`deploy/docker/README.md`](deploy/docker/README.md).
 
-## Antes de começar
+## Como a stack funciona
 
-| Item | Onde |
+Ela segue o mesmo padrão das outras stacks da Ânima nos VPS:
+
+| | |
 |---|---|
-| Docker com BuildKit e Compose v2 | na máquina de build e no VPS |
-| Token do GitHub com `read:packages` | só na máquina de build, em `NODE_AUTH_TOKEN` (o design system é privado) |
-| Acesso SSH ao VPS como root | aqui o alias `vps_anima01`, do `~/.ssh/config` |
-| Nginx Proxy Manager (NPM) no VPS | container `anima-proxy-manager-app`, stack em `/srv/stacks/anima-proxy-manager` |
-| DNS dos domínios apontando para o VPS | registros A para o IP do `vps_anima01` |
-
-A imagem é construída **na sua máquina** e enviada pronta para o VPS: o token nunca sai daqui e o VPS não precisa
-aguentar o build. A imagem é `amd64` e tem cerca de 4,8 GB (1,5 a 2 GB compactada na transferência).
-
-O token fica só no ambiente do shell, nunca em arquivo do repositório:
-
-```sh
-export NODE_AUTH_TOKEN=...   # token com read:packages
-```
+| Stack | o próprio repositório, clonado em `/srv/stacks/<APP_NAME>`. Os comandos rodam em `deploy/docker` (`make help`) |
+| Dados | `/srv/appdata/<APP_NAME>/hermes` (o `~/.hermes` do container) |
+| Backups | `/srv/backups/<APP_NAME>` |
+| Imagem | construída no próprio servidor (`make build`), com o token do GitHub Packages da conta de serviço |
+| Rede | a do Nginx Proxy Manager (`anima_proxymanager_shared_network`), como rede externa. Só `expose`: nenhuma porta publicada, nenhuma sub-rede |
+| Proxy | o NPM aponta para o **nome do container** (`<APP_NAME>`): `:9119` dashboard, `:9120` Webapp, `:8642` API |
 
 ---
 
 ## Guia de instalação
 
-Sobe o Ânima Eros como uma stack **separada** de qualquer Hermes que já exista no VPS. Os valores abaixo são os da
-demo; para outra instalação, troque nomes, pastas, rede, sub-rede e domínios.
+Uma instalação nova, por exemplo `APP_NAME=anima-eros` em `eros.animahub.ai` e `app.eros.animahub.ai`.
 
-| | Demo |
-|---|---|
-| Stack (compose) | `/srv/stacks/anima-eros-demo` |
-| Dados (`~/.hermes` do container) | `/srv/appdata/anima-eros-demo/hermes` |
-| Container | `anima-eros-demo` |
-| Rede / sub-rede | `anima-eros-demo-net` / `172.30.0.0/24` (livre no `vps_anima01`) |
-| Dashboard | `https://demo.eros.animahub.ai` |
-| Webapp | `https://demo.app.eros.animahub.ai` |
+### 1. Clonar e criar o `.env`
 
-### 1. Construir a imagem (na sua máquina)
+O servidor clona pelo mesmo alias SSH das outras stacks (`github_anima`). Se o clone for negado, a chave desse alias
+ainda não tem acesso ao repositório `Anima-Solutions/anima-eros`: dê a ela acesso de leitura no GitHub.
 
 ```sh
-cd deploy/docker
-docker compose build          # usa NODE_AUTH_TOKEN; gera hermes-agent:anima
+git clone git@github_anima:Anima-Solutions/anima-eros.git /srv/stacks/anima-eros
+cd /srv/stacks/anima-eros/deploy/docker
+make init
 ```
 
-### 2. Enviar a imagem e a pasta de deploy
+Preencha o `.env`:
+
+- `NODE_AUTH_TOKEN`: o token da conta de serviço, com `read:packages`.
+- `DASHBOARD_URL` e `WEBAPP_URL`: os domínios, com https.
+- `DASHBOARD_PASSWORD`: gere com `openssl rand -hex 16`.
+- `DASHBOARD_SESSION_SECRET`: gere com `make secret`.
+- `API_SERVER_KEY`: só se for ligar a API; gere com `make secret`.
+
+Se o servidor tiver montagens próprias, como um vault do Obsidian, copie `docker-compose.override.example.yml` para
+`docker-compose.override.yml` e ajuste.
+
+### 2. Construir, subir e configurar
 
 ```sh
-docker save hermes-agent:anima | gzip | ssh vps_anima01 'gunzip | docker load'
-
-ssh vps_anima01 'mkdir -p /srv/stacks/anima-eros-demo /srv/appdata/anima-eros-demo/hermes'
-rsync -av --exclude .env --exclude data --exclude exemplos \
-  deploy/docker/ vps_anima01:/srv/stacks/anima-eros-demo/
+make deploy        # git pull, build (≈10–15 min na primeira vez), up
+make configure     # pt-BR, Webapp e proxy confiável
+docker compose exec eros hermes setup     # modelo e chaves de API
 ```
 
-O `rsync` leva o `docker-compose.yml`, o `.env.example` e o pacote de idioma `plugins/anima-pt-br`. O `.env` e a
-pasta `data/` da sua máquina ficam de fora de propósito.
+### 3. Criar os Proxy Hosts no NPM
 
-### 3. Criar o `.env` no VPS
+Crie três Proxy Hosts, todos com Scheme `http`, **Websockets Support**, **Block Common Exploits**, Let's Encrypt,
+**Force SSL** e **HTTP/2**:
 
-```sh
-ssh vps_anima01
-cd /srv/stacks/anima-eros-demo
-cp .env.example .env && chmod 600 .env
-```
+| Domínio | Forward Hostname | Forward Port |
+|---|---|---|
+| dashboard (`DASHBOARD_URL`) | `anima-eros` | `9119` |
+| Webapp (`WEBAPP_URL`) | `anima-eros` | `9120` |
+| API (opcional) | `anima-eros` | `8642` |
 
-Ajuste no `.env` (gere segredos novos, não reaproveite os de outra máquina):
+Use sempre o nome do container, nunca o nome do serviço (`eros`): veja
+[Rede e Nginx Proxy Manager](deploy/docker/README.md#rede-e-nginx-proxy-manager).
 
-```ini
-COMPOSE_PROJECT_NAME=anima-eros-demo
-HERMES_IMAGE=hermes-agent:anima
-HERMES_CONTAINER_NAME=anima-eros-demo
-HERMES_DATA_DIR=/srv/appdata/anima-eros-demo/hermes
-HERMES_UID=1000
-HERMES_GID=1000
+### 4. Conferir
 
-HOST_BIND_IP=127.0.0.1
-HERMES_NETWORK=anima-eros-demo-net
-HERMES_SUBNET=172.30.0.0/24
-
-DASHBOARD_PUBLIC_URL=https://demo.eros.animahub.ai
-DASHBOARD_USERNAME=admin
-DASHBOARD_PASSWORD=           # openssl rand -hex 16
-DASHBOARD_SESSION_SECRET=     # openssl rand -base64 32
-API_SERVER_KEY=               # vazio = API desligada; para ligar: openssl rand -hex 32
-```
-
-`HOST_BIND_IP=127.0.0.1` mantém as portas fora da internet: quem publica é o NPM, pela rede Docker.
-
-### 4. Subir o container
-
-```sh
-docker compose up -d --no-build
-docker compose logs -f        # Ctrl+C quando o gateway e o dashboard estiverem no ar
-```
-
-O `--no-build` usa a imagem enviada no passo 2. Sem ele, o Compose tentaria construir de novo no VPS (e falharia sem o token).
-
-### 5. Configurar o Hermes
-
-```sh
-docker compose exec hermes hermes setup                       # modelo e chaves de API
-docker compose exec hermes hermes plugins enable anima-pt-br  # pacote pt-BR: plugins do usuário só carregam ativados
-docker compose exec hermes hermes config set display.language pt
-docker compose exec hermes hermes config set webapp.enabled true
-docker compose exec hermes hermes config set webapp.host 0.0.0.0
-docker compose exec hermes hermes config set webapp.port 9120
-docker compose exec hermes hermes config set webapp.public_url https://demo.app.eros.animahub.ai
-```
-
-Em `/srv/appdata/anima-eros-demo/hermes/config.yaml`, diga ao Hermes que ele está atrás de um proxy HTTPS (a sub-rede é a
-`HERMES_SUBNET`, por onde o NPM chega):
-
-```yaml
-dashboard:
-  trusted_proxies:
-    - "172.30.0.0/24"
-```
-
-Depois: `docker compose restart`.
-
-### 6. Ligar o NPM à rede da stack
-
-Agora, sem reiniciar o NPM:
-
-```sh
-docker network connect anima-eros-demo-net anima-proxy-manager-app
-```
-
-Para a ligação sobreviver a um `docker compose up` do NPM, registre a rede em
-`/srv/stacks/anima-proxy-manager/docker-compose.yml`:
-
-```yaml
-services:
-  app:
-    networks: [default, anima-eros-demo-net]
-
-networks:
-  default:
-    external: true
-    name: anima_proxymanager_shared_network
-  anima-eros-demo-net:
-    external: true
-```
-
-### 7. Criar os Proxy Hosts no NPM
-
-Crie dois, ambos com **Websockets Support**, **Block Common Exploits**, certificado Let's Encrypt, **Force SSL** e **HTTP/2**:
-
-| Domínio | Scheme | Forward Hostname | Forward Port |
-|---|---|---|---|
-| `demo.eros.animahub.ai` | `http` | `anima-eros-demo` | `9119` |
-| `demo.app.eros.animahub.ai` | `http` | `anima-eros-demo` | `9120` |
-
-### 8. Conferir
-
-- `https://demo.eros.animahub.ai` abre a tela de login Ânima; entre com `DASHBOARD_USERNAME` e `DASHBOARD_PASSWORD`.
-- `https://demo.app.eros.animahub.ai` abre o Webapp em português. No primeiro acesso de cada navegador o português leva
-  uns 15 s para aparecer (o backend ainda está respondendo); ao recarregar, aparece na hora.
-- `docker compose logs --tail 100` sem erros.
+- O dashboard abre a tela de login Ânima.
+- O Webapp abre em português. No primeiro acesso de cada navegador, o português leva uns 15 s para aparecer; ao
+  recarregar, aparece na hora.
+- `make logs` sem erros.
 
 ### Atualizar
 
-Na sua máquina, com o `main` atualizado:
-
 ```sh
-cd deploy/docker && docker compose build
-docker save hermes-agent:anima | gzip | ssh vps_anima01 'gunzip | docker load'
-rsync -av --exclude .env --exclude data --exclude exemplos deploy/docker/ vps_anima01:/srv/stacks/anima-eros-demo/
-ssh vps_anima01 'cd /srv/stacks/anima-eros-demo && docker compose up -d --no-build && docker image prune -f'
+cd /srv/stacks/anima-eros/deploy/docker
+make deploy
 ```
 
 ---
 
-## Guia de substituição
+## Guia de migração
 
-Troca a imagem do Hermes que roda em produção (`/srv/stacks/anima-hermes`, container `anima-hermes-hermes`) pela do
-Ânima Eros, **mantendo** os dados, os domínios, o login OAuth, o vault do Obsidian e os pacotes de VNC/XFCE.
+Troca o Hermes que roda hoje no `vps_anima01` pelo Ânima Eros, levando os dados. Hoje ele está na stack
+`/srv/stacks/anima-hermes`, no container `anima-hermes-hermes`, com dados em `/srv/appdata/anima-hermes/hermes`.
 
-Faça isto só depois de aprovar a demo do [guia de instalação](#guia-de-instalação) **e** de concluir a
-refatoração da metodologia de implantação (abaixo).
-
-> **Pendente antes da migração final: refatorar a metodologia de implantação.** O modelo atual (portas publicadas no
-> host, sub-rede própria, o NPM entrando na rede do Hermes) não segue o padrão das outras stacks do VPS. A refatoração
-> revê o compose, a forma de entregar a imagem e estes guias: o Hermes entra na rede compartilhada do NPM
-> (`anima_proxymanager_shared_network`, externa), só com `expose`, sem `ports` nem sub-rede. Os passos de instalação e
-> de substituição acima serão reescritos nessa etapa.
+- **A stack antiga e os dados dela não são alterados.** O Eros sobe numa stack nova (`/srv/stacks/anima-eros`), com
+  uma **cópia** dos dados. A instalação antiga fica parada, intacta, e voltar atrás leva um minuto.
+- **A troca só acontece depois que o teste com a cópia passar.**
 
 ### O que muda e o que não muda
 
 | Muda | Fica igual |
 |---|---|
-| A base da imagem: `nousresearch/hermes-agent:latest` → `hermes-agent:anima` | `/srv/appdata/anima-hermes/hermes` (sessões, memórias, kanban, cron, perfis, `.env` interno) |
-| A marca, o design system e o idioma (pacote pt-BR) | Os domínios do dashboard e do Webapp e os Proxy Hosts do NPM |
-| | O login: OAuth no dashboard, usuário e senha no Webapp |
-| | A rede `anima_proxymanager_shared_network`, os limites de CPU/memória e o `shm_size` |
+| A stack: `anima-hermes` → `anima-eros`, no padrão das outras | Os domínios de hoje: `eros.impulsebpo.com`, `app.eros.impulsebpo.com` e `api.eros.impulsebpo.com` |
+| A imagem: `nousresearch/hermes-agent` → o fork Ânima Eros (o VNC/XFCE continua) | Sessões, memórias, perfis, kanban, cron, skills e o `.env` interno (uma cópia) |
+| A marca, o design system e o idioma (pt-BR) | O login: OAuth no dashboard, usuário e senha no Webapp, a mesma `API_SERVER_KEY` |
+| O Forward Hostname no NPM: `hermes` → `anima-eros` | O vault do Obsidian, montado pelo `docker-compose.override.yml` |
 
-> **Atenção:** a versão nova pode migrar os bancos (`state.db`, `kanban.db` e outros) de um jeito que a imagem antiga
-> não lê. Por isso o backup do passo 2 é obrigatório: é ele que permite voltar atrás.
+### Fase A: preparar, com a produção no ar
 
-### 1. Enviar a imagem
+Nada desta fase toca na produção. Ela só lê os dados para copiar.
 
-Se a demo já está no VPS com a versão que você aprovou, a imagem `hermes-agent:anima` já está lá. Senão, repita os
-passos 1 e 2 do guia de instalação (só a parte da imagem). Copie também o pacote de idioma:
+**1. Clonar e criar o `.env`**
 
 ```sh
-rsync -av deploy/docker/plugins/anima-pt-br vps_anima01:/srv/stacks/anima-hermes/plugins/
+git clone git@github_anima:Anima-Solutions/anima-eros.git /srv/stacks/anima-eros
+cd /srv/stacks/anima-eros/deploy/docker
+make init
+cp docker-compose.override.example.yml docker-compose.override.yml     # monta o vault do Obsidian
 ```
 
-### 2. Parar e fazer o backup
+No `.env`, use os valores de hoje para os logins e as chaves continuarem valendo:
 
-Avise quem usa o Eros: ele fica fora do ar durante o backup (os dados têm cerca de 64 GB).
+| Novo `.env` | Valor |
+|---|---|
+| `APP_NAME` | `anima-eros` |
+| `NODE_AUTH_TOKEN` | token da conta de serviço (`read:packages`) |
+| `DASHBOARD_URL` | `https://eros.impulsebpo.com` |
+| `WEBAPP_URL` | o domínio do Webapp em uso. O NPM hoje aponta `app.eros.impulsebpo.com`, mas o `config.yaml` diz `app.hermes.impulsebpo.com`: confirme qual vale |
+| `DASHBOARD_USERNAME`, `DASHBOARD_PASSWORD`, `DASHBOARD_SESSION_SECRET` | `BASIC_AUTH_USERNAME`, `BASIC_AUTH_PASSWORD` e `BASIC_AUTH_SECRET` de `/srv/stacks/anima-hermes/.env` |
+| `API_SERVER_KEY` | o mesmo de `/srv/stacks/anima-hermes/.env` (os clientes da API usam essa chave) |
+| `MEM_LIMIT`, `CPU_LIMIT` | `8G`, `2.0` (os de hoje) |
+
+**2. Construir a imagem**
 
 ```sh
-ssh vps_anima01
-cd /srv/stacks/anima-hermes
-docker compose stop
-
-# imagem atual, para poder voltar
-docker tag anima-hermes-screen:latest anima-hermes-screen:pre-eros
-
-# dados, com o container parado (consistência dos bancos SQLite)
-mkdir -p /srv/backups
-tar -C /srv/appdata/anima-hermes -I 'zstd -T0' -cf /srv/backups/anima-hermes-$(date +%F).tar.zst hermes
-ls -lh /srv/backups/
+make build         # ≈10–15 min; usa CPU, mas a produção segue no ar
 ```
 
-Confira que o arquivo existe e tem um tamanho coerente antes de continuar. O disco tem espaço folgado para ele.
-
-### 3. Apontar a stack para a imagem nova
-
-A pasta `/srv/stacks/anima-hermes` é um repositório git: as mudanças abaixo ficam registradas e podem ser desfeitas.
-
-No `Dockerfile`, troque só a primeira linha (os pacotes de VNC/XFCE continuam):
-
-```dockerfile
-FROM hermes-agent:anima
-```
-
-No `docker-compose.yml`:
-
-```yaml
-    build:
-      context: .
-      # remova "pull: true": hermes-agent:anima existe só neste VPS, não no Docker Hub
-    image: anima-eros-screen:latest
-    ...
-    volumes:
-      - /srv/storage/obsidian-impulse/vault:/opt/data/impulse/vault
-      - /srv/appdata/anima-hermes/hermes:/opt/data
-      - ./plugins/anima-pt-br:/opt/data/plugins/anima-pt-br:ro      # novo: pacote pt-BR
-```
-
-Registre: `git add -A && git commit -m "Ânima Eros: imagem do fork com design system e pt-BR"`.
-
-### 4. Construir e subir
+**3. Testar a imagem sobre uma cópia dos dados**
 
 ```sh
-docker compose build          # só instala os pacotes de VNC/XFCE sobre hermes-agent:anima; não precisa de token
-docker compose up -d
-docker compose logs -f
-docker compose exec hermes hermes plugins enable anima-pt-br
-docker compose exec hermes hermes config set display.language pt
-docker compose restart
+make smoke SMOKE_FROM=/srv/appdata/anima-hermes/hermes SMOKE_EXCLUDE="anima-theia"
 ```
 
-### 5. Conferir
+- **O que acontece:** o teste copia os dados para uma pasta à parte, sem caches e sem o workspace `anima-theia`
+  (45 GB). Depois sobe a imagem nova **sem rede**, para não disputar mensagens com a produção, e confere a migração
+  dos bancos, a CLI, o dashboard, o Webapp, o pt-BR e o VNC.
+- **Resultado esperado:** `✔ Teste aprovado`. Não siga para a Fase B sem ele.
+- **Se der banco corrompido** (`database disk image is malformed`): a cópia pegou um banco no meio de uma escrita da
+  produção, que está no ar. Rode o teste de novo.
+
+**4. Copiar os dados com antecedência (opcional, encurta a janela)**
+
+```sh
+make adopt FROM=/srv/appdata/anima-hermes/hermes
+```
+
+A primeira cópia leva 64 GB e pode demorar. Feita agora, com a produção no ar, a cópia da janela só leva o que mudou
+depois dela.
+
+### Fase B: a troca, em janela de manutenção
+
+Avise quem usa o Eros: ele fica fora do ar da etapa 5 à 7.
+
+**5. Parar a produção antiga** (`stop`, não `down`: o container fica pronto para voltar)
+
+```sh
+cd /srv/stacks/anima-hermes && docker compose stop
+```
+
+**6. Copiar os dados e subir o Eros**
+
+```sh
+cd /srv/stacks/anima-eros/deploy/docker
+make adopt FROM=/srv/appdata/anima-hermes/hermes     # com a origem parada, a cópia sai consistente
+make up
+make configure
+docker compose exec eros hermes plugins disable anima-brand    # a marca agora vem na imagem
+make restart
+```
+
+**7. Apontar o NPM para o Eros**
+
+Nos Proxy Hosts de hoje, troque só o **Forward Hostname** para `anima-eros`. As portas continuam as mesmas:
+
+| Domínio | Forward Hostname | Forward Port |
+|---|---|---|
+| `eros.impulsebpo.com` | `hermes` → `anima-eros` | `9119` |
+| `app.eros.impulsebpo.com` | `hermes` → `anima-eros` | `9120` |
+| `api.eros.impulsebpo.com` | `hermes` → `anima-eros` | `8642` |
+
+**8. Conferir**
 
 - O dashboard abre e o login OAuth funciona.
 - O Webapp abre em português e entra com usuário e senha.
-- As sessões antigas, as memórias, o kanban e os cron jobs estão lá.
-- O VNC funciona e o vault do Obsidian aparece em `/opt/data/impulse/vault`.
-- O plugin antigo `anima-brand` não briga com a marca nova. Se a aparência ficar misturada:
-  `docker compose exec hermes hermes plugins disable anima-brand` e `docker compose restart`.
+- As sessões antigas, as memórias, o kanban e os cron jobs estão lá (`docker compose exec eros hermes sessions list`).
+- Os canais (Telegram, WhatsApp…) respondem.
+- O VNC funciona e o vault aparece em `/opt/data/impulse/vault`.
+- `make logs` sem erros novos.
 
 ### Voltar atrás
 
-Se algo der errado, volte à imagem e aos dados de antes:
+Os dados da instalação antiga não foram tocados, então a volta é imediata:
 
 ```sh
-cd /srv/stacks/anima-hermes
-docker compose down
-git revert --no-edit HEAD                       # Dockerfile e compose voltam a nousresearch/hermes-agent
-mv /srv/appdata/anima-hermes/hermes /srv/appdata/anima-hermes/hermes.eros-falhou
-tar -C /srv/appdata/anima-hermes -I zstd -xf /srv/backups/anima-hermes-AAAA-MM-DD.tar.zst
-docker tag anima-hermes-screen:pre-eros anima-hermes-screen:latest
-docker compose up -d --no-build
+cd /srv/stacks/anima-eros/deploy/docker && make down
+cd /srv/stacks/anima-hermes && docker compose start
 ```
 
-Restaurar os dados é necessário porque a versão nova pode ter migrado os bancos. A pasta `hermes.eros-falhou` guarda
-o que aconteceu depois da troca, para investigar; apague quando não precisar mais.
+No NPM, aponte os três Proxy Hosts para `anima-hermes-hermes`, o nome do container antigo, e não para `hermes`.
 
-### Depois da troca
+### Depois da migração
 
-Com a produção estável por alguns dias, a demo pode sair do ar:
-
-```sh
-cd /srv/stacks/anima-eros-demo && docker compose down
-docker network disconnect anima-eros-demo-net anima-proxy-manager-app
-```
-
-Remova também os Proxy Hosts da demo no NPM e a rede `anima-eros-demo-net` do compose do NPM.
+- **Backup:** com o Eros estável, comece a rotina com `make backup`.
+- **A stack antiga:** fica parada como plano de volta. Remova `/srv/stacks/anima-hermes` e
+  `/srv/appdata/anima-hermes` só quando decidir que não precisa mais deles.
 
 ---
 
 ## Desenvolvimento
 
-O guia de desenvolvimento do Hermes continua valendo: veja [`AGENTS.md`](AGENTS.md) e [`CONTRIBUTING.md`](CONTRIBUTING.md).
-A documentação completa do Hermes está em <https://hermes-agent.nousresearch.com/docs/>.
+- O ambiente local é o `make dev`: veja [`deploy/docker/README.md`](deploy/docker/README.md#desenvolvimento-local).
+- O guia de desenvolvimento do Hermes continua valendo: [`AGENTS.md`](AGENTS.md) e [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- A documentação completa do Hermes está em <https://hermes-agent.nousresearch.com/docs/>.

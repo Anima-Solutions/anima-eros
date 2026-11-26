@@ -1,73 +1,66 @@
-# Hermes com o design system Ânima em Docker, pronto para ficar atrás do Nginx Proxy Manager.
-#
-#   cd deploy/docker
-#   cp .env.example .env      # edite portas, usuário/senha e segredos
-#   docker compose up -d --build
-#
-# Tudo o que varia entre máquinas (portas, IP de bind, rede, pasta de dados)
-# vem do .env ao lado deste arquivo. Veja README.md para o passo a passo no VPS.
-#
-# Mantenha o ENTRYPOINT padrão da imagem (/init do s6-overlay): ele ajusta
-# UID/GID, prepara /opt/data e supervisiona o gateway e o dashboard.
-
-name: ${COMPOSE_PROJECT_NAME:-hermes-anima}
+# =============================================================================
+# Produção — Ânima Eros (gateway, dashboard, Webapp e API da Hermes num container)
+# Variáveis lidas do arquivo .env (veja .env.example). Comandos: `make help`.
+# =============================================================================
+name: ${APP_NAME:-anima-eros}
 
 services:
-  hermes:
-    build:
-      context: ../..
-      dockerfile: Dockerfile
-      # Token do GitHub Packages (read:packages) para o design system privado
-      # @anima-solutions/design-system. Entra só no build, como secret do BuildKit.
-      secrets:
-        - node_auth_token
-    image: ${HERMES_IMAGE:-hermes-agent:anima}
-    container_name: ${HERMES_CONTAINER_NAME:-hermes-anima}
+  eros:
+    # Gerada pelo `make build`: a imagem base (Dockerfile da raiz) e, por cima, a camada do Eros
+    # (deploy/docker/Dockerfile, VNC/XFCE). Não há `build:` aqui: o build em duas etapas é do Makefile.
+    image: ${APP_NAME:-anima-eros}:${IMAGE_TAG:-latest}
+    container_name: ${APP_NAME:-anima-eros}
     restart: unless-stopped
     command: ["gateway", "run"]
+    # Ferramentas de navegador (Chromium) precisam de mais que os 64 MB padrão.
+    shm_size: 1g
+    # Sem portas publicadas: o Nginx Proxy Manager chega pelo nome do container
+    # (http://<APP_NAME>:9119 dashboard, :9120 Webapp, :8642 API) na rede `proxy`.
+    expose:
+      - "9119"
+      - "9120"
+      - "8642"
     volumes:
-      - ${HERMES_DATA_DIR:-./data}:/opt/data
-      # Pacote de idioma pt-BR do Eros (versionado no repo, só leitura no container).
+      # Dados da Hermes (o ~/.hermes do container): /srv/appdata/<app>/hermes
+      - ${APPDATA_DIR:-/srv/appdata/anima-eros}/hermes:/opt/data
+      # Pacote de idioma pt-BR (versionado neste repositório, só leitura). Ativado pelo `make configure`.
       - ./plugins/anima-pt-br:/opt/data/plugins/anima-pt-br:ro
     environment:
+      # Dono dos arquivos de dados no host (o container remapeia o usuário hermes para este UID/GID)
       HERMES_UID: ${HERMES_UID:-1000}
       HERMES_GID: ${HERMES_GID:-1000}
-
-      # Dashboard (o próprio container o supervisiona; sem sidecar).
+      # Dashboard, supervisionado pelo próprio container
       HERMES_DASHBOARD: "1"
       HERMES_DASHBOARD_HOST: 0.0.0.0
-      HERMES_DASHBOARD_PORT: ${DASHBOARD_PORT:-9119}
-      HERMES_DASHBOARD_PUBLIC_URL: ${DASHBOARD_PUBLIC_URL:-}
-      # Bind não-loopback exige um provedor de login; sem ele o dashboard não sobe.
+      HERMES_DASHBOARD_PORT: "9119"
+      HERMES_DASHBOARD_PUBLIC_URL: ${DASHBOARD_URL:?defina DASHBOARD_URL no .env}
+      # Login por usuário e senha (o bind fora do loopback exige um provedor de login)
       HERMES_DASHBOARD_BASIC_AUTH_USERNAME: ${DASHBOARD_USERNAME:?defina DASHBOARD_USERNAME no .env}
       HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: ${DASHBOARD_PASSWORD:?defina DASHBOARD_PASSWORD no .env}
-      HERMES_DASHBOARD_BASIC_AUTH_SECRET: ${DASHBOARD_SESSION_SECRET:-}
-
-      # API compatível com OpenAI: liga só quando API_SERVER_KEY tem valor.
+      HERMES_DASHBOARD_BASIC_AUTH_SECRET: ${DASHBOARD_SESSION_SECRET:?defina DASHBOARD_SESSION_SECRET no .env}
+      # API compatível com OpenAI: liga quando API_SERVER_KEY tem valor
       API_SERVER_HOST: 0.0.0.0
-      API_SERVER_PORT: ${API_SERVER_PORT:-8642}
+      API_SERVER_PORT: "8642"
       API_SERVER_KEY: ${API_SERVER_KEY:-}
-    ports:
-      # HOST_BIND_IP=127.0.0.1 (padrão) deixa as portas só na própria máquina;
-      # o NPM alcança o container pela rede Docker, não por estas portas.
-      - "${HOST_BIND_IP:-127.0.0.1}:${DASHBOARD_HOST_PORT:-9119}:${DASHBOARD_PORT:-9119}"
-      - "${HOST_BIND_IP:-127.0.0.1}:${API_SERVER_HOST_PORT:-8642}:${API_SERVER_PORT:-8642}"
-      # Webapp (Hermes Desktop no navegador). Liga em data/config.yaml:
-      # webapp.enabled/host/port; webapp.port deve ser igual a WEBAPP_PORT.
-      - "${HOST_BIND_IP:-127.0.0.1}:${WEBAPP_HOST_PORT:-9120}:${WEBAPP_PORT:-9120}"
+      TZ: ${TZ:-America/Sao_Paulo}
     networks:
-      - hermes
+      - default
+      # Rede compartilhada com o Nginx Proxy Manager. No proxy, aponte SEMPRE para o nome do
+      # container (APP_NAME), nunca para o nome do serviço: o Docker dá a cada container o nome
+      # do serviço como apelido, e dois stacks com o mesmo serviço dividiriam o tráfego.
+      - proxy
+    deploy:
+      resources:
+        limits:
+          memory: ${MEM_LIMIT:-8G}
+          cpus: "${CPU_LIMIT:-2.0}"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
-  hermes:
-    # Nome fixo e sub-rede conhecida: o NPM entra nesta rede e a sub-rede vai
-    # em dashboard.trusted_proxies (config.yaml) para o Hermes confiar no
-    # X-Forwarded-Proto: https do proxy.
-    name: ${HERMES_NETWORK:-hermes-net}
-    ipam:
-      config:
-        - subnet: ${HERMES_SUBNET:-172.30.0.0/24}
-
-secrets:
-  node_auth_token:
-    environment: NODE_AUTH_TOKEN
+  proxy:
+    name: ${PROXY_NETWORK:-anima_proxymanager_shared_network}
+    external: true
