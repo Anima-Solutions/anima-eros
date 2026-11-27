@@ -1,6 +1,6 @@
 name: anima-pt-br
-version: 0.1.0
-description: Português do Brasil para o Ânima Eros (Webapp). As mensagens do agente e do terminal usam o pt embutido no Hermes.
+version: 0.2.0
+description: Português do Brasil para o Ânima Eros (Webapp). Os textos simples ficam em locales/pt.desktop.yaml; os que mudam conforme o valor, em desktop/plugin.js. As mensagens do agente e do terminal usam o pt embutido no Hermes.
 author: Ânima
 manifest_version: 1
 provides_locales:

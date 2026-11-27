@@ -68,7 +68,12 @@ export function shouldDisableComposerInput(disabled: boolean, gatewayState: Conn
   return disabled && gatewayState === 'open'
 }
 
-export const pickPlaceholder = (pool: readonly string[]) => pool[Math.floor(Math.random() * pool.length)]
+/** A starter is drawn as a position in [0, 1), not as text: the text is read from the current
+ *  language's pool on every render, so a language switch (or a language pack arriving after
+ *  mount) re-labels the same starter instead of leaving the old language's string behind. */
+export const rollPlaceholder = () => Math.random()
+
+export const placeholderAt = (pool: readonly string[], roll: number) => pool[Math.floor(roll * pool.length)] ?? ''
 
 /**
  * Width classes for the unstacked vs stacked composer editor.

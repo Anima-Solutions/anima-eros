@@ -1,5 +1,6 @@
 # Ânima Eros: Webapp em português do Brasil (camada sobre o inglês, chave a chave).
-# Gerado a partir das traduções revisadas; chaves ausentes aparecem em inglês.
+# Mantido à mão, em ordem de chave; chaves ausentes aparecem em inglês. Textos que mudam conforme o valor
+# (plural, ligado/desligado) não cabem aqui: ficam em ../desktop/plugin.js.
 "agents.activeCount": "{0} ativos"
 "agents.ageDays": "há {0} d"
 "agents.ageHours": "há {0} h"
@@ -3678,6 +3679,10 @@
 "settings.backup.down": "Offline"
 "settings.backup.errorTitle": "A transferência parou"
 "settings.backup.intro": "Salve este agente em um arquivo ou leve-o para um agente na Hermes Cloud."
+"settings.backup.keeps.0": "O login no Nous Portal"
+"settings.backup.keeps.1": "O modelo e o provedor"
+"settings.backup.keeps.2": "As ferramentas do Hermes Cloud"
+"settings.backup.keeps.3": "As configurações do agendador"
 "settings.backup.keepsTitle": "O agente na nuvem mantém"
 "settings.backup.newAgentHelp": "Crie um no Nous Portal e depois volte aqui."
 "settings.backup.newAgentTitle": "Novo agente na nuvem"
@@ -3690,6 +3695,13 @@
 "settings.backup.pickOrg": "Escolha uma equipe"
 "settings.backup.provisioning": "Configurando…"
 "settings.backup.replace": "Substituir {0}"
+"settings.backup.replaces.0": "Memória"
+"settings.backup.replaces.1": "Persona"
+"settings.backup.replaces.2": "Habilidades"
+"settings.backup.replaces.3": "Conversas"
+"settings.backup.replaces.4": "Tarefas agendadas"
+"settings.backup.replaces.5": "Configurações"
+"settings.backup.replaces.6": "Chaves de API e logins"
 "settings.backup.replacesTitle": "Substituído no agente na nuvem"
 "settings.backup.retry": "Tentar novamente"
 "settings.backup.signIn": "Entrar"
