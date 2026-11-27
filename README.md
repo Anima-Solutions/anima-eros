@@ -234,20 +234,27 @@ O agente principal começa com a configuração nova. A antiga fica em `/opt/dat
 consulta. O ClickUp do agente principal estava desligado nela, então não há o que refazer. Se notar que falta algum
 ajuste dele, refaça com `docker compose exec eros hermes config set <chave> <valor>`.
 
-**7. Conferir pelo dashboard** (`https://eros.animahub.ai`)
+**7. Conferir**
 
-Teste pelo dashboard. O Webapp (`/app`) só conversa com os agentes que estão no ar, então enquanto eles estiverem
-estacionados ele atende apenas o agente principal.
+O dashboard e o Webapp só abrem conversa com os agentes que estão no ar. Com eles estacionados, a conversa de teste
+é pela linha de comando, que roda o agente direto, sem ligar bots nem tarefas agendadas:
 
-- Os 13 agentes aparecem, com as conversas antigas.
-- Abra uma conversa nova com dois ou três agentes, incluindo o `editorfat`, que usa outro provedor. Eles respondem, com
-  a persona e as memórias de antes.
+```sh
+docker compose exec eros hermes -p anima-logus-bot chat --oneshot -q "Quem é você e o que lembra do seu trabalho?"
+docker compose exec eros hermes -p editorfat chat --oneshot -q "Quem é você?"     # usa outro provedor
+docker compose exec eros hermes -p impulse chat --oneshot -q "Liste as notas da pasta 00-Inbox do vault, sem alterar nada"
+```
+
+- Cada agente responde com a persona e as memórias de antes. Se responder pedindo credenciais, falta um login da
+  etapa 3.
+- No dashboard (`https://eros.animahub.ai`), os 13 agentes aparecem com as conversas antigas. Abrir um deles mostra
+  "This gateway does not serve profile…": é o esperado enquanto estiver estacionado.
 - Os projetos estão lá, e um agente acha os arquivos dele, por exemplo o `impulse` com `/opt/data/impulse/painel`.
 - O vault do Obsidian aparece em `/opt/data/impulse/vault`.
 - `docker compose exec eros hermes gateway status` lista os 13 agentes como `parked`.
 
-O que você conversar no Eros durante o teste se perde na troca: a etapa 10 copia de novo o histórico da instalação
-antiga por cima.
+Peça só leitura nos testes: o vault e as pastas de trabalho são os de verdade. O que você conversar no Eros durante o
+teste se perde na troca, porque a etapa 10 copia de novo o histórico da instalação antiga por cima.
 
 **8. Guardar as pastas que não migram**
 

@@ -134,8 +134,9 @@ O passo a passo está no [guia de migração](../../README.md#guia-de-migração
   attachments`), nos mesmos caminhos. O `impulse/vault` não é copiado: ele é montado pelo
   `docker-compose.override.yml`.
 - **Os agentes chegam estacionados.** Cada um recebe o marcador `gateway.parked`, o mesmo do
-  `hermes -p <agente> gateway stop`: a Hermes não liga os bots nem as tarefas agendadas dele. O dashboard conversa com
-  eles normalmente; o Webapp, só depois do `make channels-on`, que tira os marcadores.
+  `hermes -p <agente> gateway stop`: a Hermes não liga os bots nem as tarefas agendadas dele. O dashboard e o Webapp
+  também não abrem conversa com ele. Para testar, use `hermes -p <agente> chat --oneshot -q "..."`. O
+  `make channels-on` tira os marcadores.
 - **Pode repetir.** Cada rodada copia só o que mudou e espelha a origem: o que sumiu lá some aqui. O `.env` e os logins
   refeitos na instalação nova não são apagados. Com `DRY=1`, nada é gravado.
 
