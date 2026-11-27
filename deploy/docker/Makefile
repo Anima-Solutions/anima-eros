@@ -132,16 +132,30 @@ configure: ## pt-BR, Webapp e proxy confiável no config.yaml da Hermes (pode re
 	echo "✔ Configurado (proxy confiável: $$subnet). Reiniciando..."
 	$(COMPOSE) restart $(SERVICE)
 
-npm-config: ## Imprime o bloco da aba Advanced do Proxy Host para servir o Webapp em /app
-	@prefix="$$(printf '%s' "$(WEBAPP_URL)" | sed -E 's#^https?://[^/]+##')"; \
-	[ -n "$$prefix" ] || { echo "• WEBAPP_URL ($(WEBAPP_URL)) não tem caminho: use um Proxy Host próprio para o Webapp (porta 9120)"; exit 0; }; \
-	echo "# Cole na aba Advanced do Proxy Host de $(DASHBOARD_URL) (Forward: $(APP_NAME):9119)"; \
-	echo "location = $$prefix { return 301 $$prefix/; }"; \
+npm-config: ## Imprime o bloco da aba Advanced do Proxy Host (o endereço com caminho: hoje o dashboard em /admin)
+	@web_path="$$(printf '%s' "$(WEBAPP_URL)" | sed -E 's#^https?://[^/]+##')"; \
+	dash_path="$$(printf '%s' "$(DASHBOARD_URL)" | sed -E 's#^https?://[^/]+##')"; \
+	if [ -n "$$dash_path" ] && [ -z "$$web_path" ]; then \
+		prefix="$$dash_path"; port=9119; root_port=9120; what="dashboard"; root_url="$(WEBAPP_URL)"; legacy="/app"; \
+	elif [ -n "$$web_path" ] && [ -z "$$dash_path" ]; then \
+		prefix="$$web_path"; port=9120; root_port=9119; what="Webapp"; root_url="$(DASHBOARD_URL)"; legacy=""; \
+	else \
+		echo "• WEBAPP_URL e DASHBOARD_URL não dividem um domínio (um na raiz, outro num caminho):"; \
+		echo "  use um Proxy Host para cada um (Webapp na porta 9120, dashboard na 9119)"; exit 0; \
+	fi; \
+	echo "# Proxy Host de $$root_url: Forward $(APP_NAME), porta $$root_port, Websockets Support ligado."; \
+	echo "# Cole na aba Advanced dele: o $$what em $$prefix (porta $$port)."; \
+	if [ -n "$$legacy" ]; then \
+		echo "# Endereço antigo do Webapp: os links e favoritos em $$legacy continuam abrindo o app"; \
+		echo "location = $$legacy { return 301 \$$scheme://\$$http_host/; }"; \
+		echo "location ^~ $$legacy/ { rewrite ^$$legacy/(.*)\$$ \$$scheme://\$$http_host/\$$1 permanent; }"; \
+	fi; \
+	echo "location = $$prefix { return 301 \$$scheme://\$$http_host$$prefix/; }"; \
 	echo "location $$prefix/ {"; \
 	echo "  # O nome numa variável: o nginx do NPM recarrega mesmo com o Eros parado (o resolver do NPM resolve na hora)"; \
-	echo "  set \$$eros_webapp $(APP_NAME):9120;"; \
+	echo "  set \$$eros_sub $(APP_NAME):$$port;"; \
 	echo "  rewrite ^$$prefix/(.*)\$$ /\$$1 break;"; \
-	echo "  proxy_pass http://\$$eros_webapp;"; \
+	echo "  proxy_pass http://\$$eros_sub;"; \
 	echo "  proxy_http_version 1.1;"; \
 	echo "  proxy_set_header Upgrade \$$http_upgrade;"; \
 	echo "  proxy_set_header Connection \$$http_connection;"; \
