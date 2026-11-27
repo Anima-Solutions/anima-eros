@@ -524,9 +524,15 @@ def _hosted_webapp_move() -> Optional[dict[str, Optional[str]]]:
     up or not yet restarted onto that config, ``down`` one that is stopped or cannot serve it, and
     ``not_available`` an agent whose Webapp the Portal has not turned on. Cloud is the Portal's own
     stamp, or the hosted ``/opt/data`` layout with the Webapp the Portal seeds: the Docker image
-    shares that layout, so there the layout alone says nothing."""
+    shares that layout, so there the layout alone says nothing, and an install stamped otherwise
+    (``HERMES_HOSTING=self_hosted``) is never Cloud."""
     # health: allow HX002 -- read-only deployment stamp the Portal sets on its agents, not a setting; DigitalOcean agents keep their home outside /opt/data, so nothing else marks them
-    stamped = os.environ.get("HERMES_HOSTING", "").strip() == _NOUS_CLOUD_HOSTING
+    hosting = os.environ.get("HERMES_HOSTING", "").strip()
+    stamped = hosting == _NOUS_CLOUD_HOSTING
+    # Any other stamp (``self_hosted``) is the host saying it is not Cloud: it outranks the layout,
+    # which a self-hosted Docker install shares.
+    if hosting and not stamped:
+        return None
     if not stamped and not _default_hermes_root_is_opt_data():
         return None
     from hermes_cli import webapp_access

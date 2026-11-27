@@ -166,6 +166,8 @@ def _move(state, url=None):
     (False, "nous_cloud", _access(), _move("ready", _WEBAPP_URL)),  # stamped, another layout
     (False, None, _access(), None),  # not Hermes Cloud
     (False, "self_hosted", _access(), None),
+    # A self-hosted Docker install shares the /opt/data layout: its own stamp says it is not Cloud.
+    (True, "self_hosted", _access(), None),
     (True, None, _access("starting"), _move("starting")),  # gateway coming up
     (True, None, _access(served_port=9999), _move("starting")),  # not restarted onto the config yet
     (True, None, _access("stopped"), _move("down")),  # no gateway answers
