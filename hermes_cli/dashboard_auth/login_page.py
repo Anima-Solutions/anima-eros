@@ -210,6 +210,28 @@ _TOKEN_MODE_HTML = _page_html(
     </div>""",
 )
 
+# Loopback gateway-hosted Webapp (``private_launch(app.state)``): browser login cookies on
+# 127.0.0.1 are shared across ports (RFC 6265 §8.5), so the loopback Webapp opens strictly
+# via a ``hermes webapp`` private launch link rather than browser sign-in cookies.
+_PRIVATE_LAUNCH_HTML = _page_html(
+    title="Launch-link sign-in",
+    card="""\
+    <div class="card-header"><h1>Open with hermes webapp</h1></div>
+    <div class="card-body">
+      <p>This local loopback Webapp opens through a private launch link,
+      not browser sign-in cookies.</p>
+      <p>Run <code>hermes webapp</code> on this computer to open and sign
+      this browser in.</p>
+      <p>To use browser sign-in over the network, bind the Webapp to a
+      non-loopback address or set <code>webapp.public_url</code>.</p>
+    </div>""",
+)
+
+
+def render_private_launch_html() -> str:
+    """Return the notice-only HTML for ``GET /login`` on a loopback Webapp."""
+    return _PRIVATE_LAUNCH_HTML
+
 
 # Emitted ONLY when a ``supports_password`` provider is listed, so OAuth-only
 # login pages stay script-free. Plain string (not ``str.format``): braces are
