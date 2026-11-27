@@ -6,7 +6,7 @@ import { $backendTransitions, backendTransitionLabel, transitionProfileKey } fro
 import { resetBrowseState } from '@/store/composer-input-history'
 import { $activeGatewayProfile } from '@/store/profile'
 
-import { pickPlaceholder } from '../composer-utils'
+import { placeholderAt, rollPlaceholder } from '../composer-utils'
 
 interface UseComposerPlaceholderOptions {
   disabled: boolean
@@ -35,8 +35,12 @@ export function useComposerPlaceholder({
   const newSessionPlaceholders = t.composer.newSessionPlaceholders
   const followUpPlaceholders = t.composer.followUpPlaceholders
 
-  const [restingPlaceholder, setRestingPlaceholder] = useState(() =>
-    pickPlaceholder(sessionId ? followUpPlaceholders : newSessionPlaceholders)
+  // Which pool (starter vs continuation) and where in it; the text itself is read per render.
+  const [resting, setResting] = useState(() => ({ followUp: Boolean(sessionId), roll: rollPlaceholder() }))
+
+  const restingPlaceholder = placeholderAt(
+    resting.followUp ? followUpPlaceholders : newSessionPlaceholders,
+    resting.roll
   )
 
   const prevSessionIdRef = useRef(sessionId)
@@ -57,8 +61,8 @@ export function useComposerPlaceholder({
     }
 
     resetBrowseState(prev)
-    setRestingPlaceholder(pickPlaceholder(sessionId ? followUpPlaceholders : newSessionPlaceholders))
-  }, [followUpPlaceholders, newSessionPlaceholders, sessionId])
+    setResting({ followUp: Boolean(sessionId), roll: rollPlaceholder() })
+  }, [sessionId])
 
   // When the transport is disabled it's because the gateway isn't open.
   // Distinguish a cold start ("Starting Hermes...") from a dropped connection

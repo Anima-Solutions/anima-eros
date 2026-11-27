@@ -20,7 +20,7 @@ A stack segue o padrão das outras da Ânima nos VPS (`anima-design-system`, `an
 | `Dockerfile` | A camada do Eros (VNC/XFCE) sobre a imagem base |
 | `Makefile` | Todos os comandos (`make help`) |
 | `.env.example` | Modelo do `.env` (`make init`) |
-| `plugins/anima-pt-br/` | Pacote de idioma pt-BR, montado só para leitura |
+| `plugins/anima-pt-br/` | Pacote de idioma pt-BR, montado só para leitura: `locales/pt.desktop.yaml` com os textos simples e `desktop/plugin.js` com os que mudam conforme o valor (plural, ligado/desligado) |
 | `scripts/` | `backup.sh`, `restore.sh`, `migrate.sh` e `archive.sh`, chamados pelo `make`, e as listas da migração |
 
 ## Imagem

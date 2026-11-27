@@ -31,10 +31,10 @@ combinada (quando já houver uma). Ao concluir um item, remova-o daqui no mesmo 
 
 ## Textos em pt-BR
 
-- Ainda em inglês: o Bot Mode, o campo de mensagem ("What are we building?"), os nomes das plataformas e uns 60 textos
-  que só aparecem em situações específicas.
-- O pacote fica em `deploy/docker/plugins/anima-pt-br/locales/pt.desktop.yaml`, ordenado por chave. A cada
-  atualização da Hermes original, as chaves novas de `locales/_keys.desktop.json` entram nele.
+- O Webapp está todo em português. A cada atualização da Hermes original, as chaves novas de
+  `locales/_keys.desktop.json` entram no pacote: as simples em
+  `deploy/docker/plugins/anima-pt-br/locales/pt.desktop.yaml` (ordenado por chave) e as que mudam conforme o valor em
+  `deploy/docker/plugins/anima-pt-br/desktop/plugin.js`.
 
 ## Manutenção
 
