@@ -40,24 +40,27 @@ O NPM chega ao container **pelo nome do container** (`APP_NAME`). O padrão é u
 
 | Endereço | Como chega |
 |---|---|
-| `https://eros.animahub.ai` (dashboard) | Proxy Host → Forward Hostname `<APP_NAME>`, porta `9119` |
-| `https://eros.animahub.ai/app` (Webapp) | No mesmo Proxy Host, o bloco da aba **Advanced** que o `make npm-config` imprime |
+| `https://eros.animahub.ai` (Webapp) | Proxy Host → Forward Hostname `<APP_NAME>`, porta `9120` |
+| `https://eros.animahub.ai/admin` (dashboard) | No mesmo Proxy Host, o bloco da aba **Advanced** que o `make npm-config` imprime |
 | API compatível com OpenAI (opcional) | Um Proxy Host próprio (ex.: `api.eros.animahub.ai`) → `<APP_NAME>`, porta `8642` |
 
 No Proxy Host: Scheme `http`, **Websockets Support**, **Block Common Exploits**, Let's Encrypt, **Force SSL** e **HTTP/2**.
 
-O bloco do `/app`:
+O bloco do `/admin`:
 
-- **Tira o prefixo e avisa a Hermes.** Ele remove o `/app` do caminho e manda `X-Forwarded-Prefix: /app`. Com isso, a
-  Hermes monta os endereços dos arquivos, do login e do WebSocket já com o prefixo.
+- **Tira o prefixo e avisa a Hermes.** Ele remove o `/admin` do caminho e manda `X-Forwarded-Prefix: /admin`. Com
+  isso, a Hermes monta os endereços dos arquivos, do login e do WebSocket já com o prefixo.
+- **Mantém os endereços antigos.** Os links e favoritos em `/app` (onde o Webapp ficava até nov/2026) redirecionam
+  para a raiz.
 - **Recarrega mesmo com o Eros parado.** O nome do container fica numa variável, resolvida a cada requisição pelo
   `resolver` do NPM. Sem isso, um Eros parado impediria o nginx do NPM de recarregar, e todos os sites do NPM
   ficariam fora do ar.
-- **Não mistura as sessões.** O dashboard e o Webapp no mesmo domínio guardam cookies separados: os do Webapp ficam
-  em `/app`, com outro nome.
+- **Não mistura as sessões.** O dashboard e o Webapp no mesmo domínio guardam cookies separados: os do dashboard
+  ficam em `/admin`, os do Webapp têm outro nome.
 
-Um subdomínio próprio para o Webapp também funciona: `WEBAPP_URL=https://app.<domínio>` e um Proxy Host para
-`<APP_NAME>:9120`.
+O arranjo inverso (dashboard na raiz, Webapp num caminho) também funciona: o `make npm-config` lê qual dos dois
+endereços tem caminho. Um subdomínio para cada um também: um Proxy Host para `<APP_NAME>:9120` (Webapp) e outro para
+`<APP_NAME>:9119` (dashboard).
 
 > **Nunca use o nome do serviço como Forward Hostname.** O Docker registra o nome do serviço (`eros`, `hermes`…) como
 > apelido do container em toda rede de que ele participa. Duas stacks com o mesmo nome de serviço na rede do NPM
@@ -94,7 +97,7 @@ Gere segredos com `make secret` e senhas com `openssl rand -hex 16`.
 | `make build` | Gera a imagem base e a final |
 | `make up` / `make down` / `make restart` | Sobe, para e reinicia |
 | `make configure` | Ativa o pt-BR e grava as URLs públicas, o Webapp e o proxy confiável. Pode ser repetido |
-| `make npm-config` | Imprime o bloco da aba Advanced do NPM para o Webapp em `/app` |
+| `make npm-config` | Imprime o bloco da aba Advanced do NPM (o dashboard em `/admin` e o redirecionamento do `/app` antigo) |
 | `make logs` / `make ps` / `make shell` | Logs, status e shell no container |
 | `make deploy` | `git pull`, build, up e limpeza das imagens órfãs |
 | `make backup` / `make backups` / `make restore FILE=...` | Backup com o container parado, lista de backups e restauração |

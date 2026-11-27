@@ -82,6 +82,17 @@ function hermesDevToken(): Plugin {
 }
 
 export default defineConfig({
+  // Behind a path-prefix proxy (X-Forwarded-Prefix: /admin) the server rewrites index.html, but the
+  // chunks and CSS that JS loads later carry Vite's absolute `/assets/…` and 404. JS-loaded URLs
+  // join the runtime base path the server injects; CSS `url()`s resolve relative to their CSS file.
+  experimental: {
+    renderBuiltUrl(filename, { hostType }) {
+      if (hostType === "js") {
+        return { runtime: `(window.__HERMES_BASE_PATH__||"")+${JSON.stringify(`/${filename}`)}` };
+      }
+      return hostType === "css" ? { relative: true } : undefined;
+    },
+  },
   css: {
     // Tailwind runs through its Vite plugin. Keep unrelated ancestor PostCSS
     // configs (including BOM-marked JSON) out of this build.

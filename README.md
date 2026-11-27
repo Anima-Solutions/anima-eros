@@ -22,14 +22,14 @@ Ela segue o mesmo padrão das outras stacks da Ânima nos VPS:
 | Backups | `/srv/backups/<APP_NAME>` |
 | Imagem | construída no próprio servidor (`make build`), com o token do GitHub Packages da conta de serviço |
 | Rede | a do Nginx Proxy Manager (`anima_proxymanager_shared_network`), como rede externa. Só `expose`: nenhuma porta publicada, nenhuma sub-rede |
-| Proxy | o NPM aponta para o **nome do container** (`<APP_NAME>`). Um domínio só: o dashboard na raiz (`:9119`) e o Webapp em `/app` (`:9120`). A API (`:8642`), se ligada, tem um Proxy Host próprio |
+| Proxy | o NPM aponta para o **nome do container** (`<APP_NAME>`). Um domínio só: o Webapp na raiz (`:9120`) e o dashboard em `/admin` (`:9119`). A API (`:8642`), se ligada, tem um Proxy Host próprio |
 
 ---
 
 ## Guia de instalação
 
-Uma instalação nova, por exemplo `APP_NAME=anima-eros`, com o dashboard em `https://eros.animahub.ai` e o Webapp em
-`https://eros.animahub.ai/app`.
+Uma instalação nova, por exemplo `APP_NAME=anima-eros`, com o Webapp (o app de quem usa o Eros) em
+`https://eros.animahub.ai` e o dashboard (administração) em `https://eros.animahub.ai/admin`.
 
 ### 1. Clonar e criar o `.env`
 
@@ -45,7 +45,7 @@ make init
 Preencha o `.env`:
 
 - `NODE_AUTH_TOKEN`: o token da conta de serviço, com `read:packages`.
-- `DASHBOARD_URL` e `WEBAPP_URL`: já vêm como `https://eros.animahub.ai` e `https://eros.animahub.ai/app`.
+- `WEBAPP_URL` e `DASHBOARD_URL`: já vêm como `https://eros.animahub.ai` e `https://eros.animahub.ai/admin`.
 - `DASHBOARD_PASSWORD`: gere com `openssl rand -hex 16`.
 - `DASHBOARD_SESSION_SECRET`: gere com `make secret`.
 - `API_SERVER_KEY`: só se for ligar a API; gere com `make secret`.
@@ -67,10 +67,11 @@ docker compose exec eros hermes setup     # modelo e chaves de API
 
 O DNS de `eros.animahub.ai` precisa apontar para o servidor antes do certificado. Crie **um** Proxy Host:
 
-- **Domain:** `eros.animahub.ai`. **Scheme** `http`, **Forward Hostname** `anima-eros`, **Forward Port** `9119`.
+- **Domain:** `eros.animahub.ai`. **Scheme** `http`, **Forward Hostname** `anima-eros`, **Forward Port** `9120` (o Webapp).
 - **Websockets Support** e **Block Common Exploits** ligados.
 - **SSL:** Let's Encrypt, **Force SSL** e **HTTP/2**.
-- **Advanced:** cole o bloco que o `make npm-config` imprime. É ele que serve o Webapp em `/app`.
+- **Advanced:** cole o bloco que o `make npm-config` imprime. É ele que serve o dashboard em `/admin` e manda os
+  endereços antigos em `/app` para a raiz.
 
 A API, se ligada, ganha um Proxy Host próprio (ex.: `api.eros.animahub.ai` → `anima-eros`, porta `8642`).
 
@@ -79,9 +80,8 @@ Use sempre o nome do container, nunca o nome do serviço (`eros`): veja
 
 ### 4. Conferir
 
-- `https://eros.animahub.ai` abre a tela de login Ânima.
-- `https://eros.animahub.ai/app` abre o Webapp em português. No primeiro acesso de cada navegador, o português leva uns 15 s para aparecer; ao
-  recarregar, aparece na hora.
+- `https://eros.animahub.ai` abre a tela de login Ânima e, depois dela, o Webapp em português.
+- `https://eros.animahub.ai/admin` abre o dashboard (com o mesmo usuário e senha).
 - `make logs` sem erros.
 
 ### Atualizar
@@ -303,12 +303,12 @@ Ele liga os bots e as tarefas agendadas de cada agente estacionado.
 | Proxy Host | O que fazer |
 |---|---|
 | `api.eros.impulsebpo.com` | Forward Hostname `hermes` → `anima-eros`, porta `8642`. Os clientes da API não mudam nada |
-| `eros.impulsebpo.com`, `app.eros.impulsebpo.com` | Troque por **Redirection Hosts** para `eros.animahub.ai` e `eros.animahub.ai/app`, ou desative |
+| `eros.impulsebpo.com`, `app.eros.impulsebpo.com` | Troque por **Redirection Hosts** para `eros.animahub.ai/admin` e `eros.animahub.ai`, ou desative |
 
 **13. Conferir**
 
 - `docker compose exec eros hermes gateway status` lista os 13 agentes como atendidos e nenhum como `parked`.
-- O Webapp (`https://eros.animahub.ai/app`) abre em português e conversa com os agentes.
+- O Webapp (`https://eros.animahub.ai`) abre em português e conversa com os agentes.
 - Mande uma mensagem para cada bot do Telegram (`impulse`, `impulse-copywriter`, `impulse-estrategista`,
   `impulse-gerente` e `impulse-revisor`) e para o WhatsApp do `meta-ads-bot`. Todos respondem.
 - As tarefas agendadas têm o próximo horário: `docker compose exec eros hermes -p impulse cron list`.

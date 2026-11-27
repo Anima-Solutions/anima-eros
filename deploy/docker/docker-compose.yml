@@ -29,6 +29,9 @@ services:
       # Dono dos arquivos de dados no host (o container remapeia o usuário hermes para este UID/GID)
       HERMES_UID: ${HERMES_UID:-1000}
       HERMES_GID: ${HERMES_GID:-1000}
+      # Instalação própria, não o Hermes Cloud. Sem isto, a pasta /opt/data da imagem faz o dashboard
+      # se achar no Hermes Cloud e mostrar o aviso de que vai ser desativado.
+      HERMES_HOSTING: self_hosted
       # Dashboard, supervisionado pelo próprio container
       HERMES_DASHBOARD: "1"
       HERMES_DASHBOARD_HOST: 0.0.0.0
