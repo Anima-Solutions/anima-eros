@@ -119,6 +119,14 @@
   --ui-nav-row-font-size: 14px;
 }
 
+/* Ânima catalog cards (Capabilities → Skills, Plugins, Connectors, and the featured slider): the
+   DS Card surface (bg-card), not Hermes's per-card hue rotation (--catalog-accent: blue, orange,
+   purple…) washed in as a pointer-following gradient. Hierarchy comes from surface lightness, as
+   the DS asks; the hover arc already draws in --color-primary and stays. */
+:root:is([data-hermes-theme='anima'], [data-hermes-theme^='anima-accent-']) [data-catalog-card] {
+  background: var(--color-card);
+}
+
 /* Ânima control density: the DS sizes (Button xs 24 / sm 32 / default 36 / lg 40px,
    Input and SelectTrigger 36px, 14px text) instead of Hermes's padding-driven
    compact sizes. Keyed on the primitives' own data-slot / data-size / data-variant
